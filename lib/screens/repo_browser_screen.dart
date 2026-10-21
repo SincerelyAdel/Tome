@@ -35,8 +35,6 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
   bool _downloading = false;
 
   String get _currentPath => _pathStack.join('/');
-  String get _displayPath =>
-      _pathStack.isEmpty ? '/' : '/${_pathStack.join('/')}';
 
   @override
   void initState() {

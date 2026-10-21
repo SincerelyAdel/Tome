@@ -26,7 +26,6 @@ class RepoViewerApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF58A6FF),
           brightness: Brightness.dark,
-          background: const Color(0xFF0D1117),
           surface: const Color(0xFF161B22),
         ),
         scaffoldBackgroundColor: const Color(0xFF0D1117),
