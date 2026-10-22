@@ -37,7 +37,7 @@ class _GlowPainter extends CustomPainter {
     // hard line or flat band.
     final rect = Offset.zero & size;
     canvas.clipRect(rect);
-    final strength = isDark ? 1.0 : 0.7;
+    final strength = isDark ? 0.8 : 0.7;
 
     // Wide haze in the main gold.
     canvas.drawRect(

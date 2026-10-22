@@ -40,6 +40,10 @@ class _ApksScreenState extends State<ApksScreen> {
   bool _scanning = false;
   Object? _error;
 
+  // Repos and builds start collapsed; these hold the ones opened.
+  final _openRepos = <String>{};
+  final _openBuilds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -165,11 +169,30 @@ class _ApksScreenState extends State<ApksScreen> {
   @override
   Widget build(BuildContext context) {
     final shown = _shown;
-    // Group by repo, keeping the scan order (most recently pushed first).
-    final groups = <String, List<ApkEntry>>{};
+    // Repo -> build -> APKs, keeping the scan order (most recently pushed
+    // repo first, newest build first).
+    final groups = <String, Map<String, List<ApkEntry>>>{};
     for (final e in shown) {
-      groups.putIfAbsent(_filter == 4 ? 'Downloaded' : e.repoName, () => []).add(e);
+      groups
+          .putIfAbsent(e.repoName, () => {})
+          .putIfAbsent(e.group, () => [])
+          .add(e);
     }
+    // In "All", an Actions build that was also published as a release with
+    // the same number is the same build twice: keep the release.
+    if (_filter == 0) {
+      for (final builds in groups.values) {
+        final released = {
+          for (final l in builds.values)
+            if (l.first.source == ApkSource.release) l.first.groupTitle
+        };
+        builds.removeWhere((_, l) =>
+            l.first.source == ApkSource.artifact &&
+            released.contains(l.first.groupTitle));
+      }
+    }
+    // While searching, open everything that matched.
+    final searching = _search.text.trim().isNotEmpty;
     final width = MediaQuery.of(context).size.width;
     final hPad = width > 1340 ? (width - 1240) / 2 : 20.0;
 
@@ -245,19 +268,146 @@ class _ApksScreenState extends State<ApksScreen> {
                   ? 'Nothing downloaded yet.'
                   : 'No APKs found. Actions artifacts count when their name '
                       'has "apk" or "android" in it.'),
-            for (final g in groups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 22, 0, 8),
-                child: Text(g.key,
-                    style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
-              ),
-              rowsBox([for (final e in g.value) _entry(e)]),
-            ],
+            const SizedBox(height: 16),
+            for (final g in groups.entries)
+              _repoSection(g.key, g.value, searching),
           ],
         ),
+      ),
+    );
+  }
+
+  /// A repo: a collapsed header that opens to its builds.
+  Widget _repoSection(
+      String repo, Map<String, List<ApkEntry>> builds, bool searching) {
+    final open = searching || _openRepos.contains(repo);
+    final apks = builds.values.fold<int>(0, (n, l) => n + l.length);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() {
+              if (!_openRepos.remove(repo)) _openRepos.add(repo);
+            }),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+              child: Row(children: [
+                Icon(open ? Icons.expand_more : Icons.chevron_right,
+                    color: AppColors.muted),
+                const SizedBox(width: 8),
+                Icon(Icons.book_outlined, size: 19, color: AppColors.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(repo,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: AppColors.text,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w600)),
+                ),
+                Text(
+                    '${builds.length} build${builds.length == 1 ? '' : 's'}'
+                    ' · $apks APK${apks == 1 ? '' : 's'}',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13)),
+              ]),
+            ),
+          ),
+          if (open)
+            for (final b in _newestFirst(builds)) ...[
+              Divider(height: 1, color: AppColors.border),
+              _buildSection('$repo/${b.key}', b.value, searching),
+            ],
+        ],
+      ),
+    );
+  }
+
+  static List<MapEntry<String, List<ApkEntry>>> _newestFirst(
+      Map<String, List<ApkEntry>> builds) {
+    DateTime newest(List<ApkEntry> l) => l
+        .map((e) => e.date ?? DateTime(0))
+        .reduce((x, y) => x.isAfter(y) ? x : y);
+    return builds.entries.toList()
+      ..sort((x, y) => newest(y.value).compareTo(newest(x.value)));
+  }
+
+  /// One build ("repo-viewer:14"): a collapsed row that opens to its APKs.
+  Widget _buildSection(String key, List<ApkEntry> apks, bool searching) {
+    final open = searching || _openBuilds.contains(key);
+    final first = apks.first;
+    final (String label, Color color) = switch (first.source) {
+      ApkSource.release => ('Release', ghOpen),
+      ApkSource.artifact => ('Actions', AppColors.accent),
+      ApkSource.repoFile => ('In code', AppColors.muted),
+      ApkSource.device => ('Downloaded', AppColors.success),
+    };
+    final total = apks.fold<int>(0, (n, e) => n + e.size);
+    final count = first.source == ApkSource.artifact
+        ? 'zip'
+        : '${apks.length} APK${apks.length == 1 ? '' : 's'}';
+    return Container(
+      color: AppColors.bg.withOpacity(0.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() {
+              if (!_openBuilds.remove(key)) _openBuilds.add(key);
+            }),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 12, 16, 12),
+              child: Row(children: [
+                Icon(open ? Icons.expand_more : Icons.chevron_right,
+                    size: 20, color: AppColors.muted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(first.groupTitle,
+                          style: TextStyle(
+                              color: AppColors.text,
+                              fontFamily: 'monospace',
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 3),
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          pill(label, color),
+                          Text(
+                              [
+                                if (first.groupDetail.isNotEmpty)
+                                  first.groupDetail,
+                                count,
+                                if (total > 0) _size(total),
+                                if (first.date != null) timeAgo(first.date),
+                              ].join(' · '),
+                              style: TextStyle(
+                                  color: AppColors.muted, fontSize: 12.5)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+            ),
+          ),
+          if (open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(40, 0, 12, 12),
+              child: rowsBox([for (final e in apks) _entry(e)]),
+            ),
+        ],
       ),
     );
   }
@@ -273,12 +423,6 @@ class _ApksScreenState extends State<ApksScreen> {
   Widget _entry(ApkEntry e) {
     final d = _downloads[e.key];
     final files = e.source == ApkSource.device ? [e.file!] : d?.files;
-    final (String label, Color color) = switch (e.source) {
-      ApkSource.release => ('Release', ghOpen),
-      ApkSource.artifact => ('Actions', AppColors.accent),
-      ApkSource.repoFile => ('In code', AppColors.muted),
-      ApkSource.device => ('Downloaded', AppColors.success),
-    };
     final single = files != null && files.length == 1 &&
         e.source != ApkSource.artifact;
     return Column(
@@ -309,12 +453,10 @@ class _ApksScreenState extends State<ApksScreen> {
                     spacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      pill(label, color),
                       Text(
                           [
-                            if (e.detail.isNotEmpty) e.detail,
+                            if (e.source == ApkSource.repoFile) e.detail,
                             if (e.size > 0) _size(e.size),
-                            if (e.date != null) timeAgo(e.date),
                             if (single &&
                                 ArtifactService.matchesDevice(e.name))
                               'for this device',

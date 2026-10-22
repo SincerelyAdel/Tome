@@ -26,6 +26,9 @@ class ApkEntry {
     this.path,
     this.ref,
     this.file,
+    this.group = '',
+    this.groupTitle = '',
+    this.groupDetail = '',
   });
 
   final ApkSource source;
@@ -41,7 +44,12 @@ class ApkEntry {
   final String? path, ref; // file in the repo
   final File? file; // already on this device
 
-  String get repoName => '$owner/$repo';
+  /// The build this APK belongs to (one release, one artifact, the files
+  /// in the code, or one download folder), its title like
+  /// "repo-viewer:14", and a line about it.
+  final String group, groupTitle, groupDetail;
+
+  String get repoName => repo.isEmpty ? owner : '$owner/$repo';
 
   String get key => switch (source) {
         ApkSource.release => '$repoName/release/$assetId',
@@ -59,6 +67,15 @@ class ApkLibrary {
   final _dio = Dio();
 
   static final _apkArtifact = RegExp(r'apk|android', caseSensitive: false);
+
+  /// "build-14", "v1.2.0" or "RepoViewer build 14" -> "14" / "1.2.0".
+  static String _buildNo(String tag, String name) {
+    for (final t in [tag, name]) {
+      final m = RegExp(r'(\d+(?:\.\d+)*)\D*$').firstMatch(t);
+      if (m != null) return m.group(1)!;
+    }
+    return tag.isNotEmpty ? tag : name;
+  }
 
   /// Scans every repo, a few at a time, reporting each repo's APKs as it
   /// goes so the list fills in while scanning.
@@ -88,6 +105,13 @@ class ApkLibrary {
     try {
       final releases = await github.api('$base/releases?per_page=10') as List;
       for (final rel in releases) {
+        final tag = rel['tag_name']?.toString() ?? '';
+        final relName = rel['name']?.toString() ?? '';
+        final groupDetail = [
+          relName.isNotEmpty ? relName : tag,
+          if (rel['prerelease'] == true) 'pre-release',
+          if (rel['draft'] == true) 'draft',
+        ].join(' · ');
         for (final a in (rel['assets'] as List? ?? const [])) {
           final name = a['name'] as String? ?? '';
           if (!ArtifactService.isApk(name)) continue;
@@ -106,6 +130,9 @@ class ApkLibrary {
               if (rel['draft'] == true) 'draft',
             ].join(' · '),
             assetId: a['id'],
+            group: 'release-${rel['id']}',
+            groupTitle: '${r.name}:${_buildNo(tag, relName)}',
+            groupDetail: groupDetail,
           ));
         }
       }
@@ -121,6 +148,14 @@ class ApkLibrary {
         if (art.expired || !_apkArtifact.hasMatch(art.name)) continue;
         if (!seen.add(art.name)) continue;
         final run = a['workflow_run'] as Map?;
+        // The artifact list doesn't carry the run number; ask for it.
+        String? runNo;
+        if (run?['id'] != null) {
+          try {
+            final r2 = await github.api('$base/actions/runs/${run!['id']}') as Map;
+            runNo = '${r2['run_number']}';
+          } catch (_) {}
+        }
         out.add(ApkEntry(
           source: ApkSource.artifact,
           owner: r.owner,
@@ -130,6 +165,12 @@ class ApkLibrary {
           date: DateTime.tryParse(a['created_at'] ?? ''),
           detail: run?['head_branch'] == null ? '' : 'on ${run!['head_branch']}',
           artifact: art,
+          group: 'artifact-${art.id}',
+          groupTitle: '${r.name}:${runNo ?? art.name}',
+          groupDetail: [
+            'Actions artifact ${art.name}',
+            if (run?['head_branch'] != null) 'on ${run!['head_branch']}',
+          ].join(' · '),
         ));
       }
     } catch (_) {}
@@ -152,6 +193,9 @@ class ApkLibrary {
           detail: path,
           path: path,
           ref: r.defaultBranch,
+          group: 'code',
+          groupTitle: '${r.name}:${r.defaultBranch}',
+          groupDetail: 'Files in the code',
         ));
       }
     } catch (_) {}
@@ -191,19 +235,32 @@ class ApkLibrary {
       }
     }
     files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
-    return [
-      for (final f in files)
-        ApkEntry(
-          source: ApkSource.device,
-          owner: '',
-          repo: '',
-          name: f.uri.pathSegments.last,
-          size: f.lengthSync(),
-          date: f.lastModifiedSync(),
-          detail: f.parent.path.split('/apks/').last.split('/artifacts/').last,
-          file: f,
-        ),
-    ];
+    final out = <ApkEntry>[];
+    for (final f in files) {
+      // .../apks/<owner>_<repo>/<build>/x.apk or .../artifacts/<id>/files/..
+      final inApks = f.path.contains('/apks/');
+      final rest = f.path
+          .split(inApks ? '/apks/' : '/artifacts/')
+          .last
+          .split('/');
+      final where = inApks ? rest.first.replaceFirst('_', '/') : 'Actions artifacts';
+      final build = inApks && rest.length > 2 ? rest[1] : rest.first;
+      out.add(ApkEntry(
+        source: ApkSource.device,
+        owner: where,
+        repo: '',
+        name: f.uri.pathSegments.last,
+        size: f.lengthSync(),
+        date: f.lastModifiedSync(),
+        file: f,
+        group: '$where/$build',
+        groupTitle: inApks
+            ? '${where.split('/').last}:${build.replaceFirst(RegExp(r'^(release|file)-'), '')}'
+            : 'artifact:$build',
+        groupDetail: 'Downloaded',
+      ));
+    }
+    return out;
   }
 
   // ------------------------------------------------------------ downloads
