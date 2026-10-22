@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/github.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import '../models/repo_item.dart';
 import '../services/github_service.dart';
 import '../services/claude_service.dart';
@@ -199,9 +199,9 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             _content ?? '',
             language: lang,
             theme: {
-              ...githubTheme,
-              'root': githubTheme['root']!
-                  .copyWith(backgroundColor: AppColors.surface),
+              ...atomOneDarkTheme,
+              'root': atomOneDarkTheme['root']!.copyWith(
+                  backgroundColor: AppColors.surface, color: AppColors.text),
             },
             padding: const EdgeInsets.all(16),
             textStyle:

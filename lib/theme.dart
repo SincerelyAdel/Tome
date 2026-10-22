@@ -1,50 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Claude-style light palette used throughout the app.
+/// Dark palette with a gold accent, used throughout the app.
 class AppColors {
   AppColors._();
 
-  static const bg = Color(0xFFFAF9F5); // warm cream page
-  static const surface = Color(0xFFFFFFFF); // cards, fields
-  static const surfaceAlt = Color(0xFFF0EEE6); // selected rows, chips
-  static const border = Color(0xFFE3E0D5);
+  static const bg = Color(0xFF0D0D0D); // page background
+  static const surface = Color(0xFF2A2A2A); // cards, fields
+  static const surfaceAlt = Color(0xFF353535); // selected rows, chips
+  static const border = Color(0xFF3D3D3D);
 
-  static const text = Color(0xFF1F1E1D);
-  static const muted = Color(0xFF6E6C66);
-  static const faint = Color(0xFFA6A39A);
+  static const text = Color(0xFFF5F5F5); // primary text
+  static const muted = Color(0xFF9E9E9E); // secondary text (lifted for legibility)
+  static const faint = Color(0xFF6B6B6B); // palette "secondary": hints, icons
 
-  static const accent = Color(0xFFC96442); // Claude terracotta
-  static const onAccent = Color(0xFFFFFFFF);
+  static const accent = Color(0xFFC9A227); // gold
+  static const accentLight = Color(0xFFE8CB6A); // lighter gold for glows
+  static const onAccent = Color(0xFF0D0D0D);
 
-  static const success = Color(0xFF3F7D4E);
-  static const warning = Color(0xFFA86B0C);
-  static const warningBg = Color(0x1FA86B0C);
-  static const danger = Color(0xFFB8432F);
+  static const success = Color(0xFF5FAE72);
+  static const warning = Color(0xFFD9822B);
+  static const warningBg = Color(0x29D9822B);
+  static const danger = Color(0xFFE5675A);
 
-  static const folder = Color(0xFFC08A2E);
+  static const folder = Color(0xFFB8963E);
 }
 
-/// Serif headings like the Claude apps (Android maps 'serif' to Noto Serif).
+/// Serif headings (Android maps 'serif' to Noto Serif).
 const kSerif = 'serif';
 
 ThemeData buildAppTheme() {
   final scheme = ColorScheme.fromSeed(
     seedColor: AppColors.accent,
-    brightness: Brightness.light,
+    brightness: Brightness.dark,
   ).copyWith(
     primary: AppColors.accent,
     onPrimary: AppColors.onAccent,
+    secondary: AppColors.accentLight,
+    onSecondary: AppColors.onAccent,
     surface: AppColors.bg,
     onSurface: AppColors.text,
+    surfaceContainerHighest: AppColors.surface,
+    surfaceContainerHigh: AppColors.surface, // dialogs
+    surfaceTint: Colors.transparent,
     error: AppColors.danger,
     outline: AppColors.border,
   );
 
   return ThemeData(
     useMaterial3: true,
+    brightness: Brightness.dark,
     colorScheme: scheme,
     scaffoldBackgroundColor: AppColors.bg,
+    canvasColor: AppColors.bg,
     dividerColor: AppColors.border,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.bg,
@@ -52,7 +60,7 @@ ThemeData buildAppTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
       titleTextStyle: TextStyle(
         fontFamily: kSerif,
         color: AppColors.text,
@@ -66,16 +74,31 @@ ThemeData buildAppTheme() {
     ),
     progressIndicatorTheme:
         const ProgressIndicatorThemeData(color: AppColors.accent),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+    ),
+    popupMenuTheme: const PopupMenuThemeData(
+      color: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+    ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: AppColors.text,
-      contentTextStyle: TextStyle(color: AppColors.bg),
+      backgroundColor: AppColors.surface,
+      contentTextStyle: TextStyle(color: AppColors.text),
+      actionTextColor: AppColors.accentLight,
       behavior: SnackBarBehavior.floating,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: AppColors.accent,
+      selectionColor: AppColors.accent.withOpacity(0.35),
+      selectionHandleColor: AppColors.accent,
     ),
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) return AppColors.accent;
         return Colors.transparent;
       }),
+      checkColor: const WidgetStatePropertyAll(AppColors.onAccent),
       side: const BorderSide(color: AppColors.faint, width: 1.5),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -84,6 +107,9 @@ ThemeData buildAppTheme() {
         foregroundColor: AppColors.onAccent,
         elevation: 0,
       ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: AppColors.accent),
     ),
   );
 }

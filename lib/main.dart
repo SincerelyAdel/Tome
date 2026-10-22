@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/home_screen.dart';
 import 'theme.dart';
+import 'widgets/gold_glow_border.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,8 @@ class RepoViewerApp extends StatelessWidget {
       title: 'RepoViewer',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      builder: (context, child) =>
+          GoldGlowBorder(child: child ?? const SizedBox.shrink()),
       home: const HomeScreen(),
     );
   }
