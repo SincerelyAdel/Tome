@@ -40,6 +40,17 @@
             android:name="flutterEmbedding"
             android:value="2"/>
 
+        <!-- Lets "Send to phone / tablet" hand downloaded files to other apps -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths"/>
+        </provider>
+
     </application>
 
 </manifest>

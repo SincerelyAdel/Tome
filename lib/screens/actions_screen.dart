@@ -9,6 +9,7 @@ import 'package:open_filex/open_filex.dart';
 import '../models/actions.dart';
 import '../services/artifact_service.dart';
 import '../services/github_org.dart';
+import '../services/share_service.dart';
 import '../services/github_service.dart';
 import '../widgets/loader.dart';
 import '../theme.dart';
@@ -725,6 +726,16 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     );
   }
 
+  Future<void> _sendFile(File file) async {
+    try {
+      await ShareService.send(context, file);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not share the file: $e')));
+    }
+  }
+
   // ---------------------------------------------------------------- build
 
   @override
@@ -1274,12 +1285,25 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
             color: recommended ? AppColors.success : AppColors.muted,
             fontSize: 11),
       ),
-      trailing: TextButton(
-        onPressed: () => _openFile(f),
-        child: Text(apk ? 'Install' : 'Open',
-            style: TextStyle(
-                color: apk ? AppColors.success : AppColors.accent)),
-      ),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        TextButton.icon(
+          onPressed: () => _sendFile(f),
+          icon: Icon(
+              ShareService.isTablet(context)
+                  ? Icons.phone_android
+                  : Icons.tablet_android,
+              size: 17,
+              color: AppColors.accent),
+          label: Text(ShareService.sendLabel(context),
+              style: TextStyle(color: AppColors.accent)),
+        ),
+        TextButton(
+          onPressed: () => _openFile(f),
+          child: Text(apk ? 'Install' : 'Open',
+              style: TextStyle(
+                  color: apk ? AppColors.success : AppColors.accent)),
+        ),
+      ]),
     );
   }
 
