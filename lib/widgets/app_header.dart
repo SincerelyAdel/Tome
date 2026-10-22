@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../app_nav.dart';
+import '../screens/apks_screen.dart';
 import '../screens/settings_screen.dart';
+import '../services/github_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
 
 /// The RepoViewer bar fixed at the top of every page: the app name (tap it
-/// to go home), light/dark toggle and Settings. It sits above the navigator, so it never
+/// to go home), APKs, light/dark toggle and Settings. It sits above the navigator, so it never
 /// scrolls away or slides out with a page.
 class AppHeader extends StatefulWidget {
   const AppHeader({super.key});
@@ -30,6 +32,18 @@ class _AppHeaderState extends State<AppHeader> {
     await nav.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     _settingsOpen = false;
     settingsChanged.value++;
+  }
+
+  bool _apksOpen = false;
+
+  /// Every APK across the active account's repos.
+  Future<void> _apks() async {
+    final nav = navigatorKey.currentState;
+    if (nav == null || _apksOpen) return;
+    _apksOpen = true;
+    await nav.push(MaterialPageRoute(
+        builder: (_) => ApksScreen(github: GitHubService.current)));
+    _apksOpen = false;
   }
 
   void _toggleTheme() {
@@ -74,6 +88,7 @@ class _AppHeaderState extends State<AppHeader> {
               ),
             ),
             const Spacer(),
+            button(Icons.android, _apks),
             button(
                 AppColors.isDark
                     ? Icons.light_mode_outlined
