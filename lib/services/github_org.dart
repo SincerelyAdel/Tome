@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/actions.dart';
 import '../models/github_models.dart';
 import '../models/org_models.dart';
@@ -398,8 +400,57 @@ extension GitHubOrg on GitHubService {
 
   /// Deletes a repository for good (GitHub keeps it restorable for a while
   /// under Settings → Repositories → Deleted repositories).
-  Future<void> deleteRepo(String owner, String repo) =>
-      api('/repos/${_e(owner)}/${_e(repo)}', method: 'DELETE');
+  ///
+  /// When GitHub refuses, the error says why in plain words: what GitHub
+  /// said, which scopes a classic token has, and which permission a
+  /// fine-grained token is missing.
+  Future<void> deleteRepo(String owner, String repo) async {
+    final res = await http.delete(
+      Uri.parse('https://api.github.com/repos/${_e(owner)}/${_e(repo)}'),
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        if (hasToken) 'Authorization': 'token $token',
+      },
+    );
+    if (res.statusCode == 204) return;
+
+    var said = '';
+    try {
+      said = (jsonDecode(res.body)['message'] ?? '').toString();
+    } catch (_) {}
+    final scopes = res.headers['x-oauth-scopes'];
+    final wants = res.headers['x-accepted-github-permissions'];
+    final classic = scopes != null;
+    final lines = <String>[
+      'GitHub said: ${said.isEmpty ? 'error ${res.statusCode}' : said} '
+          '(${res.statusCode}).',
+    ];
+    if (classic) {
+      final list = scopes.split(',').map((x) => x.trim()).where((x) => x.isNotEmpty);
+      lines.add('This is a classic token with: '
+          '${list.isEmpty ? 'no scopes' : list.join(', ')}.');
+      if (!list.contains('delete_repo')) {
+        lines.add('Add the delete_repo scope to it on github.com → Settings → '
+            'Developer settings → Tokens (classic), then save it again here.');
+      } else if (res.statusCode == 403) {
+        lines.add('The token is fine; this account is not an admin of '
+            '$owner/$repo, or $owner does not let members delete repos.');
+      }
+    } else {
+      lines.add('This is a fine-grained token.');
+      if (res.statusCode == 404) {
+        lines.add('It cannot see $owner/$repo. On github.com, check that its '
+            'Resource owner is $owner and its Repository access includes '
+            'this repo. For an organization, the token may also be waiting '
+            'for approval under the org Settings → Personal access tokens.');
+      } else {
+        lines.add('It needs Repository permissions → Administration: Read and '
+            'write${wants != null && wants.isNotEmpty ? ' (GitHub asks for $wants)' : ''}. '
+            'Edit the token on github.com, then save it again here.');
+      }
+    }
+    throw ApiException(res.statusCode, lines.join('\n'));
+  }
 
   /// Starts the APK builder workflow in [builder] ("owner/name") for
   /// [source] ("owner/name"). [ref] blank means the default branch.

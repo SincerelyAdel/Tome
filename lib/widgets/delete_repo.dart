@@ -86,22 +86,33 @@ Future<bool> deleteRepoFlow(BuildContext context, GitHubService github,
   ctrl.dispose();
   if (go != true || !context.mounted) return false;
 
-  final messenger = ScaffoldMessenger.of(context);
   try {
     await github.deleteRepo(owner, repo);
-    messenger.showSnackBar(SnackBar(content: Text('Deleted $owner/$repo')));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Deleted $owner/$repo')));
+    }
     reposChanged.value++;
     return true;
   } catch (e) {
-    final msg = e is ApiException && e.status == 403
-        ? 'Your token can\'t delete repos. A classic token needs the '
-            'delete_repo scope; a fine-grained one needs Administration: '
-            'Read and write.'
-        : e is ApiException
-            ? e.message
-            : '$e';
-    messenger.showSnackBar(
-        SnackBar(content: Text(msg), duration: const Duration(seconds: 7)));
+    // A dialog, not a snackbar: the reason is worth reading in full.
+    if (context.mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text('Could not delete $repo',
+              style: TextStyle(color: AppColors.text)),
+          content: SelectableText(e is ApiException ? e.message : '$e',
+              style: TextStyle(color: AppColors.muted, height: 1.5)),
+          actions: [
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK')),
+          ],
+        ),
+      );
+    }
     return false;
   }
 }
