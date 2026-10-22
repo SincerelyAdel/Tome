@@ -32,35 +32,31 @@ class _GlowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Strokes sit exactly on the screen edge and are heavily blurred, so
+    // only their inner half shows: light that fades softly inward, with no
+    // hard line or flat band.
     final rect = Offset.zero & size;
+    canvas.clipRect(rect);
+    final strength = isDark ? 1.0 : 0.7;
 
-    // Wide, faint outer haze in the main gold.
+    // Wide haze in the main gold.
     canvas.drawRect(
-      rect.deflate(2),
+      rect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..color = AppColors.accent.withOpacity(0.45)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+        ..strokeWidth = 18
+        ..color = AppColors.accent.withOpacity(0.55 * strength)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
     );
 
-    // Tighter, brighter glow in the lighter gold.
+    // Softer, brighter core in the lighter gold.
     canvas.drawRect(
-      rect.deflate(1.5),
+      rect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = AppColors.accentLight.withOpacity(0.7)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-
-    // Crisp edge line.
-    canvas.drawRect(
-      rect.deflate(0.75),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = AppColors.accentLight,
+        ..strokeWidth = 6
+        ..color = AppColors.accentLight.withOpacity(0.45 * strength)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
   }
 

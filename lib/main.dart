@@ -14,8 +14,15 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  _hideSystemBars();
   AppTheme.set(await PrefsService.getDarkMode());
   runApp(const RepoViewerApp());
+}
+
+/// Full screen: status bar and navigation bar stay hidden. Swiping in from
+/// the top or bottom edge shows them for a moment, then they hide again.
+void _hideSystemBars() {
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 }
 
 class RepoViewerApp extends StatefulWidget {
@@ -25,11 +32,19 @@ class RepoViewerApp extends StatefulWidget {
   State<RepoViewerApp> createState() => _RepoViewerAppState();
 }
 
-class _RepoViewerAppState extends State<RepoViewerApp> {
+class _RepoViewerAppState extends State<RepoViewerApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     AppTheme.isDark.addListener(_onThemeChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Android can bring the bars back while the app is in the background.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _hideSystemBars();
   }
 
   /// Screens read [AppColors] directly, so after a switch every widget
@@ -47,6 +62,7 @@ class _RepoViewerAppState extends State<RepoViewerApp> {
   @override
   void dispose() {
     AppTheme.isDark.removeListener(_onThemeChanged);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
