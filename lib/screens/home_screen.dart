@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../app_nav.dart';
 import '../models/repo_item.dart';
 import '../services/github_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
+import 'profile_screen.dart';
 import 'repo_browser_screen.dart';
 import 'settings_screen.dart';
 
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    settingsChanged.addListener(_reloadTokens);
     _init();
   }
 
@@ -45,7 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _page = (await PrefsService.getActiveAccount()).clamp(0, _accountCount - 1);
     _recentRepos = await PrefsService.getRecentRepos();
     if (!mounted) return;
+    _useAccount(_page);
     setState(() => _pages = PageController(initialPage: _page));
+  }
+
+  /// Screens opened from anywhere (profiles, mentions) use this account.
+  void _useAccount(int i) {
+    GitHubService.current = GitHubService(token: _tokens[i]);
   }
 
   bool _hasToken(int i) => (_tokens[i] ?? '').isNotEmpty;
@@ -57,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onPageChanged(int page) {
     setState(() => _page = page);
+    _useAccount(page);
     PrefsService.setActiveAccount(page);
   }
 
@@ -108,7 +118,24 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => RepoBrowserScreen(
             owner: owner, repo: repo, token: _tokens[account]),
       ),
-    ).then((_) => _loadRecent());
+    ).then((_) {
+      _useAccount(_page);
+      _loadRecent();
+    });
+  }
+
+  void _openProfile(String login, int account) {
+    FocusScope.of(context).unfocus();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+            login: login, github: GitHubService(token: _tokens[account])),
+      ),
+    ).then((_) {
+      _useAccount(_page);
+      _loadRecent();
+    });
   }
 
   Future<void> _openSettings() async {
@@ -116,6 +143,11 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
+    await _reloadTokens();
+  }
+
+  /// Picks up tokens saved in Settings.
+  Future<void> _reloadTokens() async {
     final t1 = await PrefsService.getGithubToken();
     final t2 = await PrefsService.getGithubToken2();
     if (!mounted) return;
@@ -123,13 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _tokens[0] = t1;
       _tokens[1] = t2;
     });
+    _useAccount(_page);
     _loadRecent();
-  }
-
-  void _toggleTheme() {
-    final dark = !AppColors.isDark;
-    AppTheme.set(dark);
-    PrefsService.setDarkMode(dark);
   }
 
   /// Whose repos page [i] lists: a username, or null for the token
@@ -151,34 +178,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final hPad = _hPad(MediaQuery.of(context).size.width);
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 16,
-        title: Row(children: [
-          Icon(Icons.auto_awesome, color: AppColors.accent, size: 22),
-          const SizedBox(width: 10),
-          const Text('RepoViewer'),
-        ]),
-        actions: [
-          IconButton(
-            icon: Icon(
-                AppColors.isDark
-                    ? Icons.light_mode_outlined
-                    : Icons.dark_mode_outlined,
-                color: AppColors.muted),
-            tooltip: AppColors.isDark ? 'Light theme' : 'Dark theme',
-            onPressed: _toggleTheme,
-          ),
-          IconButton(
-            icon: Icon(Icons.settings_outlined, color: AppColors.muted),
-            tooltip: 'Settings',
-            onPressed: _openSettings,
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
       body: Column(children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 0),
+          padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 0),
           child: _buildInput(),
         ),
         if (_recentRepos.isNotEmpty) _buildRecent(hPad),
@@ -201,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       typed: _typedOwner[i] != null,
                       hPad: hPad,
                       onOpenRepo: (owner, repo) => _openRepo(owner, repo, i),
+                      onOpenProfile: (login) => _openProfile(login, i),
                       onClearTyped: () =>
                           setState(() => _typedOwner[i] = null),
                       onOpenSettings: _openSettings,
@@ -290,6 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    settingsChanged.removeListener(_reloadTokens);
     _inputCtrl.dispose();
     _pages?.dispose();
     super.dispose();
@@ -373,6 +377,7 @@ class _AccountPage extends StatefulWidget {
     required this.typed,
     required this.hPad,
     required this.onOpenRepo,
+    required this.onOpenProfile,
     required this.onClearTyped,
     required this.onOpenSettings,
   });
@@ -385,6 +390,7 @@ class _AccountPage extends StatefulWidget {
   final bool typed;
   final double hPad;
   final void Function(String owner, String repo) onOpenRepo;
+  final ValueChanged<String> onOpenProfile;
   final VoidCallback onClearTyped;
   final VoidCallback onOpenSettings;
 
@@ -503,21 +509,32 @@ class _AccountPageState extends State<_AccountPage>
         : _hasToken
             ? 'Account ${widget.index + 1} · your repositories'
             : 'Account ${widget.index + 1} · public repositories';
+    final login = widget.owner ?? _login;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: login == null ? null : () => widget.onOpenProfile(login),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
           CircleAvatar(
             radius: 22,
             backgroundColor: AppColors.surfaceAlt,
             foregroundImage: (_avatarUrl ?? '').isNotEmpty &&
                     widget.owner == null
                 ? NetworkImage(_avatarUrl!)
-                : null,
+                : widget.owner != null && widget.owner!.isNotEmpty
+                    ? NetworkImage(
+                        'https://github.com/${widget.owner}.png?size=96')
+                    : null,
             child: Icon(Icons.person_outline, color: AppColors.muted),
           ),
           const SizedBox(width: 14),
-          Expanded(
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -533,6 +550,14 @@ class _AccountPageState extends State<_AccountPage>
                 Text(subtitle,
                     style: TextStyle(color: AppColors.muted, fontSize: 13)),
               ],
+            ),
+          ),
+          if (login != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, color: AppColors.faint),
+          ],
+                ]),
+              ),
             ),
           ),
           if (widget.typed)

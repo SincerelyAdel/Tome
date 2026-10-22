@@ -52,6 +52,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
   void initState() {
     super.initState();
     _github = GitHubService(token: widget.token);
+    GitHubService.current = _github;
     _loadPath('');
     _github.getRepoInfo(widget.owner, widget.repo).then((info) {
       if (!mounted) return;

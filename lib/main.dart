@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'app_nav.dart';
 import 'screens/home_screen.dart';
+import 'widgets/app_header.dart';
 import 'services/prefs_service.dart';
 import 'theme.dart';
 import 'widgets/gold_glow_border.dart';
@@ -73,8 +75,20 @@ class _RepoViewerAppState extends State<RepoViewerApp>
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       themeAnimationDuration: Duration.zero,
-      builder: (context, child) =>
-          GoldGlowBorder(child: child ?? const SizedBox.shrink()),
+      navigatorKey: navigatorKey,
+      // The header stays fixed above every page.
+      builder: (context, child) => GoldGlowBorder(
+        child: Column(children: [
+          const AppHeader(),
+          Expanded(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ]),
+      ),
       home: const HomeScreen(),
     );
   }

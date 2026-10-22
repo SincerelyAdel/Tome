@@ -90,7 +90,7 @@ class _CommitDetailScreenState extends State<CommitDetailScreen> {
           ],
           const SizedBox(height: 14),
           Row(children: [
-            Avatar(c.author?.avatarUrl ?? '', size: 22),
+            Avatar(c.author?.avatarUrl ?? '', size: 22, login: c.author?.login),
             const SizedBox(width: 8),
             Text('$who committed ${timeAgo(c.date)}',
                 style: TextStyle(color: AppColors.muted, fontSize: 13.5)),

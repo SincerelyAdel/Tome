@@ -315,3 +315,99 @@ class GhCheckRun {
         completedAt: DateTime.tryParse(json['completed_at'] ?? ''),
       );
 }
+
+/// A user or organization profile.
+class GhProfile {
+  final String login;
+  final String name;
+  final String avatarUrl;
+  final String bio;
+  final String company;
+  final String location;
+  final String blog;
+  final String twitter;
+  final String email;
+  final int followers;
+  final int following;
+  final int publicRepos;
+  final DateTime? createdAt;
+  final bool isOrg;
+
+  const GhProfile({
+    required this.login,
+    this.name = '',
+    this.avatarUrl = '',
+    this.bio = '',
+    this.company = '',
+    this.location = '',
+    this.blog = '',
+    this.twitter = '',
+    this.email = '',
+    this.followers = 0,
+    this.following = 0,
+    this.publicRepos = 0,
+    this.createdAt,
+    this.isOrg = false,
+  });
+
+  factory GhProfile.fromJson(Map<String, dynamic> j) => GhProfile(
+        login: j['login'] ?? '',
+        name: j['name'] ?? '',
+        avatarUrl: j['avatar_url'] ?? '',
+        bio: j['bio'] ?? j['description'] ?? '',
+        company: j['company'] ?? '',
+        location: j['location'] ?? '',
+        blog: j['blog'] ?? '',
+        twitter: j['twitter_username'] ?? '',
+        email: j['email'] ?? '',
+        followers: j['followers'] ?? 0,
+        following: j['following'] ?? 0,
+        publicRepos: j['public_repos'] ?? 0,
+        createdAt: DateTime.tryParse(j['created_at'] ?? ''),
+        isOrg: j['type'] == 'Organization',
+      );
+}
+
+/// A pinned repository on a profile.
+class GhPinnedRepo {
+  final String owner;
+  final String name;
+  final String description;
+  final String language;
+  final String languageColor;
+  final int stars;
+  final int forks;
+
+  const GhPinnedRepo({
+    required this.owner,
+    required this.name,
+    this.description = '',
+    this.language = '',
+    this.languageColor = '',
+    this.stars = 0,
+    this.forks = 0,
+  });
+}
+
+/// One day on the contribution calendar. [level] is 0 (none) to 4 (most).
+class GhContributionDay {
+  final DateTime date;
+  final int count;
+  final int level;
+
+  const GhContributionDay(this.date, this.count, this.level);
+}
+
+/// Profile extras that only GitHub's GraphQL API gives (needs a token).
+class GhProfileExtras {
+  final List<GhPinnedRepo> pinned;
+  final int totalContributions;
+
+  /// Weeks of 7 days, oldest first.
+  final List<List<GhContributionDay>> weeks;
+
+  const GhProfileExtras(
+      {this.pinned = const [],
+      this.totalContributions = 0,
+      this.weeks = const []});
+}

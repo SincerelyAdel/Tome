@@ -170,7 +170,15 @@ class _IssuesTabState extends State<IssuesTab> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('#${i.number} $verb by ${i.user.login}',
+                Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: '#${i.number} $verb by '),
+                      userSpan(i.user.login,
+                          style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600)),
+                    ]),
                     style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
               ],
             ),

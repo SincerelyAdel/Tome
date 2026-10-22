@@ -204,7 +204,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       final merged = p?.merged ?? _i.isMerged;
       return [
         Text.rich(TextSpan(children: [
-          TextSpan(text: _i.user.login, style: strong),
+          userSpan(_i.user.login, style: strong),
           TextSpan(
               text: merged ? ' merged ' : ' wants to merge ', style: muted),
           if (n != null)
@@ -219,7 +219,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     final n = _i.comments;
     return [
       Text.rich(TextSpan(children: [
-        TextSpan(text: _i.user.login, style: strong),
+        userSpan(_i.user.login, style: strong),
         TextSpan(
             text: ' opened this issue ${timeAgo(_i.createdAt)}'
                 ' · $n comment${n == 1 ? '' : 's'}',
@@ -437,21 +437,21 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         return _review(e);
       case 'review_requested':
         return _eventRow(Icons.visibility_outlined, e, [
-          _b(who), _t(' requested a review from '), _b(subj)]);
+          _u(who), _t(' requested a review from '), _u(subj)]);
       case 'review_request_removed':
         return _eventRow(Icons.visibility_off_outlined, e, [
-          _b(who), _t(' removed the request for review from '), _b(subj)]);
+          _u(who), _t(' removed the request for review from '), _u(subj)]);
       case 'assigned':
         return _eventRow(Icons.person_outline, e, subj == who
-            ? [_b(who), _t(' self-assigned this')]
-            : [_b(who), _t(' assigned '), _b(subj)]);
+            ? [_u(who), _t(' self-assigned this')]
+            : [_u(who), _t(' assigned '), _u(subj)]);
       case 'unassigned':
         return _eventRow(Icons.person_remove_outlined, e,
-            [_b(who), _t(' unassigned '), _b(subj)]);
+            [_u(who), _t(' unassigned '), _u(subj)]);
       case 'labeled':
       case 'unlabeled':
         return _eventRow(Icons.label_outline, e, [
-          _b(who),
+          _u(who),
           _t(e.event == 'labeled' ? ' added the ' : ' removed the '),
           WidgetSpan(
               alignment: PlaceholderAlignment.middle,
@@ -460,7 +460,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         ]);
       case 'renamed':
         return _eventRow(Icons.edit_outlined, e, [
-          _b(who), _t(' changed the title '),
+          _u(who), _t(' changed the title '),
           TextSpan(
               text: e.renameFrom ?? '',
               style: TextStyle(
@@ -470,42 +470,42 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         ]);
       case 'merged':
         return _eventRow(Icons.merge, e, [
-          _b(who), _t(' merged commit '),
+          _u(who), _t(' merged commit '),
           _mono((e.sha ?? '').padRight(7).substring(0, 7)),
           _t(' into '), _b(_pull?.baseRef ?? _i.baseRef ?? ''),
         ], color: ghMerged);
       case 'closed':
-        return _eventRow(Icons.block, e, [_b(who), _t(' closed this')],
+        return _eventRow(Icons.block, e, [_u(who), _t(' closed this')],
             color: _isPr ? ghClosed : ghMerged);
       case 'reopened':
         return _eventRow(Icons.radio_button_checked, e,
-            [_b(who), _t(' reopened this')], color: ghOpen);
+            [_u(who), _t(' reopened this')], color: ghOpen);
       case 'head_ref_force_pushed':
         return _eventRow(Icons.upload_outlined, e,
-            [_b(who), _t(' force-pushed the head branch')]);
+            [_u(who), _t(' force-pushed the head branch')]);
       case 'head_ref_deleted':
         return _eventRow(Icons.delete_outline, e,
-            [_b(who), _t(' deleted the head branch')]);
+            [_u(who), _t(' deleted the head branch')]);
       case 'head_ref_restored':
         return _eventRow(Icons.restore, e,
-            [_b(who), _t(' restored the head branch')]);
+            [_u(who), _t(' restored the head branch')]);
       case 'ready_for_review':
         return _eventRow(Icons.visibility_outlined, e,
-            [_b(who), _t(' marked this pull request as ready for review')]);
+            [_u(who), _t(' marked this pull request as ready for review')]);
       case 'convert_to_draft':
         return _eventRow(Icons.edit_note, e,
-            [_b(who), _t(' marked this pull request as draft')]);
+            [_u(who), _t(' marked this pull request as draft')]);
       case 'cross-referenced':
-        return _eventRow(Icons.link, e, [_b(who), _t(' mentioned this')]);
+        return _eventRow(Icons.link, e, [_u(who), _t(' mentioned this')]);
       case 'referenced':
         return _eventRow(Icons.commit, e, [
-          _b(who), _t(' added a commit that referenced this'),
+          _u(who), _t(' added a commit that referenced this'),
           if (e.sha != null) ...[_t(' '), _mono(e.sha!.substring(0, 7))],
         ]);
       case 'milestoned':
       case 'demilestoned':
         return _eventRow(Icons.flag_outlined, e, [
-          _b(who),
+          _u(who),
           _t(e.event == 'milestoned'
               ? ' added this to a milestone'
               : ' removed this from a milestone'),
@@ -516,6 +516,11 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   }
 
   InlineSpan _t(String s) => TextSpan(text: s);
+
+  /// A username that opens the profile.
+  InlineSpan _u(String login) => userSpan(login,
+      style: TextStyle(
+          color: AppColors.text, fontWeight: FontWeight.w600, fontSize: 13.5));
   InlineSpan _b(String s) => TextSpan(
       text: s,
       style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600));
@@ -542,7 +547,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         ),
         const SizedBox(width: 10),
         if (e.actor != null) ...[
-          Avatar(e.actor!.avatarUrl, size: 20),
+          Avatar(e.actor!.avatarUrl, size: 20, login: e.actor!.login),
           const SizedBox(width: 8),
         ],
         Expanded(
@@ -563,6 +568,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   /// "X added N commits" followed by the commits, like GitHub.
   Widget _commitGroup(List<GhEvent> commits) {
     final who = commits.first.authorName ?? 'someone';
+    InlineSpan Function(String) name = _b;
     return Padding(
       padding: const EdgeInsets.only(left: _lineX - 15, top: 6, bottom: 6),
       child: Column(
@@ -583,7 +589,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             Expanded(
               child: Text.rich(
                 TextSpan(children: [
-                  _b(who),
+                  name(who),
                   _t(' added ${commits.length} commit'
                       '${commits.length == 1 ? '' : 's'}'),
                   TextSpan(
@@ -666,7 +672,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
       'dismissed' => ('\'s review was dismissed', Icons.block, null),
       _ => (' reviewed', Icons.visibility_outlined, null),
     };
-    final row = _eventRow(icon, e, [_b(who), _t(verb)], color: color);
+    final row = _eventRow(icon, e, [_u(who), _t(verb)], color: color);
     if (e.body.trim().isEmpty) return row;
     return Column(children: [
       row,
@@ -685,7 +691,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         SizedBox(
           width: _gutter,
           child: Align(
-              alignment: Alignment.topLeft, child: Avatar(user.avatarUrl, size: 40)),
+              alignment: Alignment.topLeft, child: Avatar(user.avatarUrl, size: 40, login: user.login)),
         ),
         Expanded(
           child: Container(
@@ -717,7 +723,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                   child: Row(children: [
                     Expanded(
                       child: Text.rich(TextSpan(children: [
-                        _b(user.login),
+                        _u(user.login),
                         TextSpan(
                             text: ' $verb ${timeAgo(at)}',
                             style: TextStyle(color: AppColors.muted)),
@@ -812,7 +818,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             runSpacing: 6,
             children: participants.values
                 .map((u) => Tooltip(
-                    message: u.login, child: Avatar(u.avatarUrl, size: 28)))
+                    message: u.login, child: Avatar(u.avatarUrl, size: 28, login: u.login)))
                 .toList(),
           ),
         ], last: true),
@@ -843,7 +849,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     );
   }
 
-  Widget _person(GhUser u, {Widget? trailing}) => Padding(
+  Widget _person(GhUser u, {Widget? trailing}) => InkWell(
+        onTap: () => openProfile(context, u.login),
+        child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
           Avatar(u.avatarUrl, size: 22),
@@ -858,7 +866,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           ),
           if (trailing != null) trailing,
         ]),
-      );
+      ));
 
   Widget _reviewIcon(String state) => switch (state) {
         'approved' => Icon(Icons.check, size: 18, color: ghOpen),
@@ -913,7 +921,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
                       Row(children: [
-                        Avatar(c[i].author?.avatarUrl ?? '', size: 18),
+                        Avatar(c[i].author?.avatarUrl ?? '', size: 18, login: c[i].author?.login),
                         const SizedBox(width: 6),
                         Text(
                             '${c[i].author?.login ?? c[i].authorName} committed '

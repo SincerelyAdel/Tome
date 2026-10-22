@@ -180,11 +180,13 @@ class GitHubService {
     throw Exception('Failed to load checks: ${response.statusCode}');
   }
 
+  /// One page of history; pages start at 1.
   Future<List<GhCommit>> getCommits(String owner, String repo,
-      {String? branch}) async {
+      {String? branch, int page = 1, int perPage = 100}) async {
     final sha = branch == null ? '' : '&sha=${Uri.encodeQueryComponent(branch)}';
     final list = await _getList(
-        '$_baseUrl/repos/$owner/$repo/commits?per_page=100$sha', 'commits');
+        '$_baseUrl/repos/$owner/$repo/commits?per_page=$perPage&page=$page$sha',
+        'commits');
     return list.map((e) => GhCommit.fromJson(e)).toList();
   }
 
@@ -258,10 +260,189 @@ class GitHubService {
 
   bool get hasToken => token != null && token!.isNotEmpty;
 
+  /// The app-wide service for the account in use, so screens opened from
+  /// anywhere (like a profile from an @mention) use the right token.
+  static GitHubService current = GitHubService();
+
+  Future<Map<String, dynamic>> _getJson(String url, String what) async {
+    final response = await http.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    if (response.statusCode == 404) throw Exception('$what not found');
+    if (response.statusCode == 403) {
+      throw Exception('GitHub rate limit hit or no access (403).');
+    }
+    throw Exception('Failed to load $what: ${response.statusCode}');
+  }
+
+  // ------------------------------------------------------------ profiles
+
+  Future<GhProfile> getProfile(String login) async => GhProfile.fromJson(
+      await _getJson('$_baseUrl/users/${Uri.encodeComponent(login)}', 'User'));
+
+  Future<List<GhUser>> getFollowers(String login,
+      {bool following = false}) async {
+    final list = await _getList(
+        '$_baseUrl/users/${Uri.encodeComponent(login)}/'
+        '${following ? 'following' : 'followers'}?per_page=100',
+        following ? 'following' : 'followers');
+    return list.map((e) => GhUser.fromJson(e)).toList();
+  }
+
+  /// The profile README (login/login, or .github/profile for orgs), or null.
+  Future<String?> getProfileReadme(String login, {bool isOrg = false}) async {
+    final url = isOrg
+        ? '$_baseUrl/repos/$login/.github/contents/profile/README.md'
+        : '$_baseUrl/repos/$login/$login/readme';
+    final response = await http.get(Uri.parse(url),
+        headers: {..._headers, 'Accept': 'application/vnd.github.raw'});
+    return response.statusCode == 200
+        ? utf8.decode(response.bodyBytes, allowMalformed: true)
+        : null;
+  }
+
+  /// Pinned repos and the contribution calendar. GitHub only serves these
+  /// over GraphQL, which needs a token; returns null without one.
+  Future<GhProfileExtras?> getProfileExtras(String login,
+      {bool isOrg = false}) async {
+    if (!hasToken) return null;
+    final owner = isOrg ? 'organization' : 'user';
+    final calendar = isOrg
+        ? ''
+        : 'contributionsCollection { contributionCalendar { totalContributions '
+            'weeks { contributionDays { date contributionCount contributionLevel } } } }';
+    final query = 'query(\$l: String!) { $owner(login: \$l) { '
+        'pinnedItems(first: 6, types: REPOSITORY) { nodes { ... on Repository { '
+        'name owner { login } description stargazerCount forkCount '
+        'primaryLanguage { name color } } } } $calendar } }';
+    final response = await http.post(Uri.parse('$_baseUrl/graphql'),
+        headers: _headers,
+        body: jsonEncode({
+          'query': query,
+          'variables': {'l': login}
+        }));
+    if (response.statusCode != 200) return null;
+    final data = (jsonDecode(response.body)['data'] ?? {})[owner];
+    if (data == null) return null;
+    final pinned = ((data['pinnedItems']?['nodes'] as List?) ?? [])
+        .where((n) => n is Map && n['name'] != null)
+        .map((n) => GhPinnedRepo(
+              owner: n['owner']?['login'] ?? login,
+              name: n['name'],
+              description: n['description'] ?? '',
+              language: n['primaryLanguage']?['name'] ?? '',
+              languageColor: n['primaryLanguage']?['color'] ?? '',
+              stars: n['stargazerCount'] ?? 0,
+              forks: n['forkCount'] ?? 0,
+            ))
+        .toList();
+    final cal = data['contributionsCollection']?['contributionCalendar'];
+    const levels = {
+      'FIRST_QUARTILE': 1,
+      'SECOND_QUARTILE': 2,
+      'THIRD_QUARTILE': 3,
+      'FOURTH_QUARTILE': 4,
+    };
+    final weeks = ((cal?['weeks'] as List?) ?? [])
+        .map((w) => ((w['contributionDays'] as List?) ?? [])
+            .map((d) => GhContributionDay(
+                  DateTime.parse(d['date']),
+                  d['contributionCount'] ?? 0,
+                  levels[d['contributionLevel']] ?? 0,
+                ))
+            .toList())
+        .toList();
+    return GhProfileExtras(
+      pinned: pinned,
+      totalContributions: cal?['totalContributions'] ?? 0,
+      weeks: weeks,
+    );
+  }
+
+  // ------------------------------------------------------------- actions
+
+  Future<List<Workflow>> getWorkflows(String owner, String repo) async {
+    final data = await _getJson(
+        '$_baseUrl/repos/$owner/$repo/actions/workflows?per_page=100',
+        'workflows');
+    return ((data['workflows'] as List?) ?? [])
+        .map((e) => Workflow.fromJson(e))
+        .toList();
+  }
+
+  Future<WorkflowRun> getRun(String owner, String repo, int runId) async =>
+      WorkflowRun.fromJson(await _getJson(
+          '$_baseUrl/repos/$owner/$repo/actions/runs/$runId', 'Run'));
+
+  Future<List<WorkflowJob>> getRunJobs(
+      String owner, String repo, int runId) async {
+    final data = await _getJson(
+        '$_baseUrl/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100',
+        'jobs');
+    return ((data['jobs'] as List?) ?? [])
+        .map((e) => WorkflowJob.fromJson(e))
+        .toList();
+  }
+
+  Future<RunTiming> getRunTiming(String owner, String repo, int runId) async =>
+      RunTiming.fromJson(await _getJson(
+          '$_baseUrl/repos/$owner/$repo/actions/runs/$runId/timing',
+          'timing'));
+
+  /// A job's check-run annotations (errors and warnings).
+  Future<List<CheckAnnotation>> getAnnotations(
+      String owner, String repo, int jobId) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/check-runs/$jobId/annotations?per_page=100',
+        'annotations');
+    return list.map((e) => CheckAnnotation.fromJson(e)).toList();
+  }
+
+  /// A job's full plain-text log. GitHub redirects to a signed URL that
+  /// must be fetched without the token.
+  Future<String> getJobLog(String owner, String repo, int jobId) async {
+    if (!hasToken) {
+      throw Exception('GitHub only shows logs to signed-in users. '
+          'Add a token in Settings.');
+    }
+    final client = http.Client();
+    try {
+      final request = http.Request('GET',
+          Uri.parse('$_baseUrl/repos/$owner/$repo/actions/jobs/$jobId/logs'))
+        ..followRedirects = false
+        ..headers.addAll(_headers);
+      final response =
+          await http.Response.fromStream(await client.send(request));
+      final location = response.headers['location'];
+      if (response.statusCode >= 300 &&
+          response.statusCode < 400 &&
+          location != null) {
+        final log = await client.get(Uri.parse(location));
+        if (log.statusCode == 200) {
+          return utf8.decode(log.bodyBytes, allowMalformed: true);
+        }
+        throw Exception('Could not download the log (${log.statusCode}).');
+      }
+      if (response.statusCode == 200) {
+        return utf8.decode(response.bodyBytes, allowMalformed: true);
+      }
+      if (response.statusCode == 404 || response.statusCode == 410) {
+        throw Exception('The log is not available yet, or it has expired.');
+      }
+      throw Exception('Could not load the log (${response.statusCode}).');
+    } finally {
+      client.close();
+    }
+  }
+
   Future<List<WorkflowRun>> getWorkflowRuns(String owner, String repo,
-      {int perPage = 30}) async {
+      {int perPage = 30, int page = 1, int? workflowId}) async {
+    final base = workflowId == null
+        ? '$_baseUrl/repos/$owner/$repo/actions/runs'
+        : '$_baseUrl/repos/$owner/$repo/actions/workflows/$workflowId/runs';
     final response = await http.get(
-      Uri.parse('$_baseUrl/repos/$owner/$repo/actions/runs?per_page=$perPage'),
+      Uri.parse('$base?per_page=$perPage&page=$page'),
       headers: _headers,
     );
     if (response.statusCode == 200) {

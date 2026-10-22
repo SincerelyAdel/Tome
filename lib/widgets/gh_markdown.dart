@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../theme.dart';
+import 'gh_widgets.dart';
 
 /// GitHub-flavored markdown (tables, task lists, strikethrough, autolinks)
 /// styled to match the app.
@@ -21,9 +22,14 @@ class GhMarkdown extends StatelessWidget {
       data: _fromGitHubHtml(data),
       selectable: true,
       extensionSet: md.ExtensionSet.gitHubWeb,
+      inlineSyntaxes: [MentionSyntax()],
       styleSheet: _styleSheet(fontSize),
       onTapLink: (text, href, title) {
         if (href == null) return;
+        if (href.startsWith(MentionSyntax.scheme)) {
+          openProfile(context, href.substring(MentionSyntax.scheme.length));
+          return;
+        }
         Clipboard.setData(ClipboardData(text: href));
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Link copied: $href')));
@@ -63,6 +69,26 @@ class GhMarkdown extends StatelessWidget {
   }
 }
 
+/// @user and @org/team mentions: bold, gold, and tappable (opens the
+/// profile), like GitHub's.
+class MentionSyntax extends md.InlineSyntax {
+  MentionSyntax()
+      : super(
+            r'(?<![\w@/`.])@([A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38})'
+            r'(?:/[A-Za-z0-9_.-]+)?(?![\w@])',
+            startCharacter: 0x40);
+
+  static const scheme = 'mention:';
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    final link = md.Element.text('a', match[0]!)
+      ..attributes['href'] = '$scheme${match[1]}';
+    parser.addNode(md.Element('strong', [link]));
+    return true;
+  }
+}
+
 /// Turns the HTML GitHub allows in comments into markdown the renderer
 /// understands: <img> becomes an image, <br> a line break, and
 /// <details>/<summary> wrappers are dropped (their contents stay).
@@ -94,8 +120,7 @@ MarkdownStyleSheet _styleSheet(double size) {
       border: Border(bottom: BorderSide(color: AppColors.border)));
   return MarkdownStyleSheet(
     p: body,
-    a: TextStyle(color: AppColors.accent, decoration: TextDecoration.underline,
-        decorationColor: AppColors.accent.withOpacity(0.5)),
+    a: TextStyle(color: AppColors.accent),
     strong: const TextStyle(fontWeight: FontWeight.w700),
     em: const TextStyle(fontStyle: FontStyle.italic),
     del: TextStyle(decoration: TextDecoration.lineThrough, color: AppColors.muted),

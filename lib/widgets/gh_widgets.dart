@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/github_models.dart';
+import '../screens/profile_screen.dart';
 import '../theme.dart';
 
 /// "3d ago", "2h ago" ...
@@ -38,23 +39,64 @@ Widget issueStateIcon(GhIssue i, {double size = 20}) {
       : Icon(Icons.check_circle_outline, color: ghMerged, size: size);
 }
 
-/// Round avatar with a person icon until the image loads.
+/// Opens a GitHub user's or organization's profile page.
+void openProfile(BuildContext context, String login) {
+  if (login.isEmpty || login == 'ghost' || login == '?') return;
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => ProfileScreen(login: login)),
+  );
+}
+
+/// Round avatar with a person icon until the image loads. With a [login]
+/// it opens that profile when tapped.
 class Avatar extends StatelessWidget {
-  const Avatar(this.url, {super.key, this.size = 20});
+  const Avatar(this.url, {super.key, this.size = 20, this.login});
 
   final String url;
   final double size;
+  final String? login;
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: size / 2,
       backgroundColor: AppColors.surfaceAlt,
       foregroundImage: url.isEmpty ? null : NetworkImage(url),
       child: Icon(Icons.person, size: size * 0.7, color: AppColors.faint),
     );
+    if (login == null || login!.isEmpty) return avatar;
+    return GestureDetector(
+      onTap: () => openProfile(context, login!),
+      child: avatar,
+    );
   }
 }
+
+/// A username that opens the profile when tapped.
+class UserName extends StatelessWidget {
+  const UserName(this.login, {super.key, this.style});
+
+  final String login;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => openProfile(context, login),
+      child: Text(login,
+          style: style ??
+              TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+/// [UserName] inside a Text.rich.
+InlineSpan userSpan(String login, {TextStyle? style}) => WidgetSpan(
+      alignment: PlaceholderAlignment.baseline,
+      baseline: TextBaseline.alphabetic,
+      child: UserName(login, style: style),
+    );
 
 /// A colored issue label, like GitHub's.
 class LabelChip extends StatelessWidget {

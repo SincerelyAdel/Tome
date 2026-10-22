@@ -28,15 +28,34 @@ class CommitsTab extends StatefulWidget {
 class _CommitsTabState extends State<CommitsTab> {
   static const _rowHeight = 66.0;
   static const _maxLanes = 10;
+  static const _pageSize = 100;
 
   List<GhCommit>? _commits;
   List<GraphRow> _graph = [];
   String? _error;
 
+  /// Older history loads a page at a time as the list nears its end.
+  int _page = 1;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  String? _moreError;
+  final _scroll = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_onScroll);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scroll.position.extentAfter < _rowHeight * 12) _loadMore();
   }
 
   @override
@@ -52,17 +71,51 @@ class _CommitsTabState extends State<CommitsTab> {
     final branch = widget.branch;
     setState(() => _error = null);
     try {
-      final c = await widget.github
-          .getCommits(widget.owner, widget.repo, branch: branch);
+      final c = await widget.github.getCommits(widget.owner, widget.repo,
+          branch: branch, perPage: _pageSize);
       if (mounted && branch == widget.branch) {
         setState(() {
           _commits = c;
           _graph = layoutGraph(c);
+          _page = 1;
+          _hasMore = c.length == _pageSize;
+          _moreError = null;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final commits = _commits;
+    if (commits == null || !_hasMore || _loadingMore || _moreError != null) {
+      return;
+    }
+    final branch = widget.branch;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await widget.github.getCommits(widget.owner, widget.repo,
+          branch: branch, page: _page + 1, perPage: _pageSize);
+      if (!mounted || branch != widget.branch || _commits != commits) return;
+      // Pages can overlap if new commits were pushed meanwhile.
+      final seen = commits.map((c) => c.sha).toSet();
+      final all = [...commits, ...next.where((c) => !seen.contains(c.sha))];
+      setState(() {
+        _commits = all;
+        _graph = layoutGraph(all);
+        _page++;
+        _hasMore = next.length == _pageSize;
+        _loadingMore = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingMore = false;
+          _moreError = e.toString().replaceFirst('Exception: ', '');
+        });
       }
     }
   }
@@ -82,11 +135,44 @@ class _CommitsTabState extends State<CommitsTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 32),
         itemExtent: _rowHeight,
-        itemCount: commits.length,
-        itemBuilder: (_, i) => _row(commits[i], _graph[i], graphWidth),
+        itemCount: commits.length + 1,
+        itemBuilder: (_, i) => i < commits.length
+            ? _row(commits[i], _graph[i], graphWidth)
+            : _footer(commits.length),
       ),
+    );
+  }
+
+  /// Spinner while the next page loads, a retry on error, or the end.
+  Widget _footer(int count) {
+    if (_moreError != null) {
+      return Center(
+        child: TextButton.icon(
+          icon: Icon(Icons.refresh, color: AppColors.danger, size: 18),
+          label: Text('Couldn’t load more. Retry',
+              style: TextStyle(color: AppColors.danger)),
+          onPressed: () {
+            setState(() => _moreError = null);
+            _loadMore();
+          },
+        ),
+      );
+    }
+    if (_hasMore) {
+      return const Center(
+        child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5)),
+      );
+    }
+    return Center(
+      child: Text('$count commits · start of history',
+          style: TextStyle(color: AppColors.faint, fontSize: 12.5)),
     );
   }
 
@@ -138,7 +224,7 @@ class _CommitsTabState extends State<CommitsTab> {
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 5),
                     Row(children: [
-                      Avatar(c.author?.avatarUrl ?? '', size: 18),
+                      Avatar(c.author?.avatarUrl ?? '', size: 18, login: c.author?.login),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
