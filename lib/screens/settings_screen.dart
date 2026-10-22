@@ -102,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
+                  backgroundColor: AppColors.button,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -110,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(
                   _saved ? '✓ Saved' : 'Save',
                   style: TextStyle(
-                      color: AppColors.onAccent,
+                      color: AppColors.onButton,
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
                 ),

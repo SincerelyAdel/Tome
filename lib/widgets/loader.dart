@@ -111,8 +111,8 @@ Future<bool> confirmAction(BuildContext context,
             child: Text('Cancel', style: TextStyle(color: AppColors.muted))),
         FilledButton(
           style: FilledButton.styleFrom(
-              backgroundColor: danger ? AppColors.danger : AppColors.accent,
-              foregroundColor: danger ? Colors.white : AppColors.onAccent),
+              backgroundColor: danger ? AppColors.danger : AppColors.button,
+              foregroundColor: danger ? Colors.white : AppColors.onButton),
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(action),
         ),
@@ -155,9 +155,9 @@ Widget segmentChips(
               selected: i == selected,
               onSelected: (_) => onSelect(i),
               labelStyle: TextStyle(
-                  color: i == selected ? AppColors.onAccent : AppColors.text,
+                  color: i == selected ? AppColors.onButton : AppColors.text,
                   fontSize: 13),
-              selectedColor: AppColors.accent,
+              selectedColor: AppColors.button,
               backgroundColor: AppColors.surface,
               side: BorderSide(color: AppColors.border),
               showCheckmark: false,

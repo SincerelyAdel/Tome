@@ -244,8 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : IconButton.filled(
                   style: IconButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.onAccent,
+                    backgroundColor: AppColors.button,
+                    foregroundColor: AppColors.onButton,
                   ),
                   icon: const Icon(Icons.arrow_upward, size: 20),
                   tooltip: 'Go',

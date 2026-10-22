@@ -271,8 +271,8 @@ class _PeopleTabState extends State<PeopleTab> {
           right: 24,
           bottom: 24,
           child: FloatingActionButton.extended(
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.onAccent,
+            backgroundColor: AppColors.button,
+            foregroundColor: AppColors.onButton,
             onPressed: _invite,
             icon: const Icon(Icons.person_add_alt),
             label: const Text('Invite member'),

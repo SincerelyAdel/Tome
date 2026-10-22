@@ -15,6 +15,8 @@ class AppPalette {
     required this.accent,
     required this.accentLight,
     required this.onAccent,
+    required this.button,
+    required this.onButton,
     required this.success,
     required this.warning,
     required this.warningBg,
@@ -26,6 +28,9 @@ class AppPalette {
   final Color bg, surface, surfaceAlt, border;
   final Color text, muted, faint;
   final Color accent, accentLight, onAccent;
+
+  /// Fill and text of solid buttons and selected chips: a lighter gold.
+  final Color button, onButton;
   final Color success, warning, warningBg, danger, folder;
 }
 
@@ -41,6 +46,8 @@ const darkPalette = AppPalette(
   accent: Color(0xFFC9A227), // gold
   accentLight: Color(0xFFE8CB6A), // lighter gold for glows
   onAccent: Color(0xFF0D0D0D),
+  button: Color(0xFFE6CA72),
+  onButton: Color(0xFF1A1508),
   success: Color(0xFF5FAE72),
   warning: Color(0xFFD9822B),
   warningBg: Color(0x29D9822B),
@@ -60,6 +67,8 @@ const lightPalette = AppPalette(
   accent: Color(0xFF9C7A12), // deeper gold so it reads on cream
   accentLight: Color(0xFFC9A227),
   onAccent: Color(0xFFFFFFFF),
+  button: Color(0xFFDDBE5C),
+  onButton: Color(0xFF1F1E1D),
   success: Color(0xFF3F7D4E),
   warning: Color(0xFFB8641C),
   warningBg: Color(0x1FB8641C),
@@ -85,6 +94,8 @@ class AppColors {
   static Color get accent => _p.accent;
   static Color get accentLight => _p.accentLight;
   static Color get onAccent => _p.onAccent;
+  static Color get button => _p.button;
+  static Color get onButton => _p.onButton;
   static Color get success => _p.success;
   static Color get warning => _p.warning;
   static Color get warningBg => _p.warningBg;
@@ -181,10 +192,20 @@ ThemeData buildAppTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: c.accent,
-        foregroundColor: c.onAccent,
+        backgroundColor: c.button,
+        foregroundColor: c.onButton,
         elevation: 0,
       ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: c.button,
+        foregroundColor: c.onButton,
+      ),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: c.button,
+      foregroundColor: c.onButton,
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: c.accent),

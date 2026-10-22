@@ -251,9 +251,9 @@ class _ActionsScreenState extends State<ActionsScreen> {
               selected: active,
               onSelected: (_) => _pick(w),
               labelStyle: TextStyle(
-                  color: active ? AppColors.onAccent : AppColors.text,
+                  color: active ? AppColors.onButton : AppColors.text,
                   fontSize: 13),
-              selectedColor: AppColors.accent,
+              selectedColor: AppColors.button,
               backgroundColor: AppColors.surface,
               side: BorderSide(color: AppColors.border),
               showCheckmark: false,
@@ -302,8 +302,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
                         if (widget.github.hasToken)
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.accent,
-                                foregroundColor: AppColors.onAccent),
+                                backgroundColor: AppColors.button,
+                                foregroundColor: AppColors.onButton),
                             onPressed: () => _runWorkflow(_workflow!),
                             icon: const Icon(Icons.play_arrow, size: 18),
                             label: const Text('Run workflow'),
@@ -887,9 +887,9 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
               selected: active,
               onSelected: (_) => _show(it.$1),
               labelStyle: TextStyle(
-                  color: active ? AppColors.onAccent : AppColors.text,
+                  color: active ? AppColors.onButton : AppColors.text,
                   fontSize: 13),
-              selectedColor: AppColors.accent,
+              selectedColor: AppColors.button,
               backgroundColor: AppColors.surface,
               side: BorderSide(color: AppColors.border),
               showCheckmark: false,
@@ -1236,8 +1236,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
                       )
                     : FilledButton.icon(
                         style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: AppColors.onAccent),
+                            backgroundColor: AppColors.button,
+                            foregroundColor: AppColors.onButton),
                         onPressed: _gh.hasToken ? () => _download(a) : null,
                         icon: const Icon(Icons.download, size: 18),
                         label: Text(s?.files != null ? 'Again' : 'Get'),

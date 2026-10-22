@@ -38,7 +38,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
   double _downloadProgress = 0;
   bool _downloading = false;
 
-  /// Selected tab: 0 Code, 1 Issues, 2 Pull requests, 3 Commits, 4 Branches.
+  /// Selected tab: 0 Code, 1 Issues, 2 Pull requests, 3 Commit graph, 4 Branches.
   int _tab = 0;
 
   /// Branch shown in Code and Commits; null until the repo info loads.
@@ -315,11 +315,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     );
   }
 
-  /// Shows [name] in Code and Commits, and jumps back to Code.
-  void _selectBranch(String name) {
+  /// Shows [name] in Code and the commit graph, and jumps to [tab].
+  void _selectBranch(String name, [int tab = 0]) {
     final changed = name != _branch;
     setState(() {
-      _tab = 0;
+      _tab = tab;
       if (!changed) return;
       _branch = name;
       _cache.clear();
@@ -541,7 +541,7 @@ class _RepoTabBar extends StatelessWidget implements PreferredSizeWidget {
     (Icons.code, 'Code'),
     (Icons.radio_button_checked, 'Issues'),
     (Icons.call_split, 'Pull requests'),
-    (Icons.commit, 'Commits'),
+    (Icons.commit, 'Commit graph'),
     (Icons.account_tree_outlined, 'Branches'),
   ];
 

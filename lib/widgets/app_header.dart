@@ -4,8 +4,8 @@ import '../screens/settings_screen.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
 
-/// The RepoViewer bar fixed at the top of every page: app name, Home,
-/// light/dark toggle and Settings. It sits above the navigator, so it never
+/// The RepoViewer bar fixed at the top of every page: the app name (tap it
+/// to go home), light/dark toggle and Settings. It sits above the navigator, so it never
 /// scrolls away or slides out with a page.
 class AppHeader extends StatefulWidget {
   const AppHeader({super.key});
@@ -74,7 +74,6 @@ class _AppHeaderState extends State<AppHeader> {
               ),
             ),
             const Spacer(),
-            button(Icons.home_outlined, _home),
             button(
                 AppColors.isDark
                     ? Icons.light_mode_outlined

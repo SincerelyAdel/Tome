@@ -225,8 +225,8 @@ class _IssueActionsState extends State<IssueActions> {
                     ),
                   FilledButton(
                     style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.onAccent),
+                        backgroundColor: AppColors.button,
+                        foregroundColor: AppColors.onButton),
                     onPressed: _busy || _text.text.trim().isEmpty
                         ? null
                         : _comment,
