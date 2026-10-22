@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String?> _typedOwner = List.filled(_accountCount, null);
 
   /// Whose public repos account 1 shows when it has no token.
-  String _publicOwner = 'SincerelyAdel';
+  String _publicOwner = '';
   int _page = 0;
 
   @override
@@ -787,7 +787,7 @@ class _AccountPageState extends State<_AccountPage>
         Icon(Icons.person_add_alt_1_outlined,
             size: 56, color: AppColors.faint),
         const SizedBox(height: 16),
-        Text('Account ${widget.index + 1}',
+        Text(widget.index == 0 ? 'Welcome to RepoViewer' : 'Account 2',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontFamily: kSerif,
@@ -796,8 +796,13 @@ class _AccountPageState extends State<_AccountPage>
                 fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         Text(
-          'Add a GitHub token for your second account in Settings.\n'
-          'Then swipe left and right here to switch accounts.',
+          widget.index == 0
+              ? 'Add a GitHub token in Settings to see your own repos, '
+                  'private ones included.\n'
+                  'Or type any username or owner/repo above to browse '
+                  'public code.'
+              : 'Add a GitHub token for your second account in Settings.\n'
+                  'Then swipe left and right here to switch accounts.',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.muted, fontSize: 14, height: 1.5),
         ),

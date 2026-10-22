@@ -3,21 +3,21 @@ import 'package:repoviewer/services/github_service.dart';
 
 void main() {
   test('repo inputs parse as repos', () {
-    expect(GitHubService.parseRepoUrl('https://github.com/SincerelyAdel/RTL'),
-        {'owner': 'SincerelyAdel', 'repo': 'RTL'});
-    expect(GitHubService.parseRepoUrl('SincerelyAdel/RTL'),
-        {'owner': 'SincerelyAdel', 'repo': 'RTL'});
+    expect(GitHubService.parseRepoUrl('https://github.com/octocat/RTL'),
+        {'owner': 'octocat', 'repo': 'RTL'});
+    expect(GitHubService.parseRepoUrl('octocat/RTL'),
+        {'owner': 'octocat', 'repo': 'RTL'});
   });
 
   test('usernames are not repos but parse as usernames', () {
     for (final input in [
-      'SincerelyAdel',
-      '@SincerelyAdel',
-      'https://github.com/SincerelyAdel',
-      'github.com/SincerelyAdel/',
+      'octocat',
+      '@octocat',
+      'https://github.com/octocat',
+      'github.com/octocat/',
     ]) {
       expect(GitHubService.parseRepoUrl(input), isNull, reason: input);
-      expect(GitHubService.parseUsername(input), 'SincerelyAdel',
+      expect(GitHubService.parseUsername(input), 'octocat',
           reason: input);
     }
   });

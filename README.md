@@ -71,7 +71,7 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 
 ## Usage
 
-1. Launch the app — it lists your repositories (or SincerelyAdel's public ones without a token)
+1. Launch the app and add a GitHub token in Settings to list your repositories, or type any username to browse public ones
 2. Swipe left/right to switch GitHub accounts
 3. Tap a repo to browse it, or type a repo URL / `owner/repo` / username in the top box
 4. Navigate folders, tap files to view them

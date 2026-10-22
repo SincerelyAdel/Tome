@@ -248,8 +248,7 @@ class GitHubService {
     throw Exception('Failed to load repos: ${response.statusCode}');
   }
 
-  /// "SincerelyAdel", "github.com/SincerelyAdel" or "@SincerelyAdel"
-  /// -> "SincerelyAdel". Returns null for anything else.
+  /// "octocat", "github.com/octocat" or "@octocat" -> "octocat". Returns null for anything else.
   static String? parseUsername(String input) {
     input = input.trim();
     final url = RegExp(r'github\.com/([A-Za-z0-9-]+)/?$').firstMatch(input);

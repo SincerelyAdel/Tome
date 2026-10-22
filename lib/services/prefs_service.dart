@@ -81,9 +81,10 @@ class PrefsService {
   }
 
   /// Whose public repos to list on the home screen when there's no token.
+  /// Empty until someone types a username: a fresh install shows a welcome.
   static Future<String> getListOwner() async {
     final p = await SharedPreferences.getInstance();
-    return p.getString(_listOwnerKey) ?? 'SincerelyAdel';
+    return p.getString(_listOwnerKey) ?? '';
   }
 
   static Future<void> setListOwner(String owner) async {

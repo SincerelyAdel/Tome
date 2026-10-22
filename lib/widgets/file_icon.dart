@@ -106,9 +106,8 @@ const Map<String, String> _byName = {
   'local.properties': 'properties',
 };
 
-/// Highlighting by extension. Covers every language used across the
-/// SincerelyAdel and Empty-Quarter-Semiconductor-Company repos, plus the
-/// config and script files that sit next to them.
+/// Highlighting by extension: common languages, HDL and EDA files, plus
+/// the config and script files that sit next to them.
 const Map<String, String> _byExt = {
   // HDL / EDA
   'v': 'verilog', 'vh': 'verilog', 'sv': 'verilog', 'svh': 'verilog',
