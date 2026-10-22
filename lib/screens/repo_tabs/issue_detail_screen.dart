@@ -4,6 +4,7 @@ import '../../services/github_org.dart';
 import '../../services/github_service.dart';
 import '../../theme.dart';
 import '../../widgets/diff_view.dart';
+import '../../widgets/file_tree.dart';
 import '../../widgets/gh_markdown.dart';
 import '../../widgets/gh_widgets.dart';
 import '../../widgets/issue_actions.dart';
@@ -41,14 +42,58 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   List<GhCheckRun>? _checks;
   final Map<int, String> _tabErrors = {};
 
+  // Files changed: the page scroll, the file tree that stays in view while
+  // the diffs scroll past, and a key per diff card to jump to it.
+  final _scroll = ScrollController();
+  final _bodyKey = GlobalKey();
+  final _filesKey = GlobalKey();
+  final _treeOffset = ValueNotifier<double>(0);
+  final Map<String, GlobalKey> _fileKeys = {};
+  String? _selectedFile;
+  double _viewportH = 800;
+
   GhIssue get _i => widget.issue;
   bool get _isPr => _i.isPullRequest;
 
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_placeTree);
     _loadTimeline();
     if (_isPr) _loadPull();
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _treeOffset.dispose();
+    super.dispose();
+  }
+
+  static const _treeGap = 12.0;
+
+  double get _treeH => _viewportH - 2 * _treeGap;
+
+  /// Slides the file tree down so it stays on screen while the diffs next
+  /// to it scroll, without running past the last diff.
+  void _placeTree() {
+    final row = _filesKey.currentContext?.findRenderObject() as RenderBox?;
+    final body = _bodyKey.currentContext?.findRenderObject() as RenderBox?;
+    if (row == null || body == null || !row.attached) return;
+    final top = row.localToGlobal(Offset.zero, ancestor: body).dy;
+    final max = row.size.height - _treeH;
+    _treeOffset.value = max <= 0 ? 0 : (_treeGap - top).clamp(0.0, max);
+  }
+
+  void _jumpToFile(GhFileChange f) {
+    setState(() => _selectedFile = f.filename);
+    final ctx = _fileKeys[f.filename]?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          alignment: 0.02);
+    }
   }
 
   String _msg(Object e) => e.toString().replaceFirst('Exception: ', '');
@@ -129,7 +174,19 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             style: TextStyle(color: AppColors.text, fontSize: 16)),
         iconTheme: IconThemeData(color: AppColors.text),
       ),
-      body: ListView(
+      body: LayoutBuilder(
+        key: _bodyKey,
+        builder: (context, box) {
+          _viewportH = box.maxHeight;
+          return _page(wide, hPad);
+        },
+      ),
+    );
+  }
+
+  Widget _page(bool wide, double hPad) {
+    return ListView(
+        controller: _scroll,
         padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 48),
         children: [
           _header(wide),
@@ -159,9 +216,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           else if (_tab == 2)
             _checksTab()
           else
-            _filesTab(),
+            _filesTab(wide),
         ],
-      ),
     );
   }
 
@@ -1029,7 +1085,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     );
   }
 
-  Widget _filesTab() {
+  Widget _filesTab(bool wide) {
     final f = _files;
     if (f == null) return tabMessage(error: _tabErrors[3], onRetry: _loadFiles);
     if (f.isEmpty) return tabMessage(empty: 'No files changed');
@@ -1046,8 +1102,53 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           diffBar(adds, dels),
         ]),
         const SizedBox(height: 12),
-        ...f.map((x) => DiffFileCard(x)),
+        if (!wide) ...[
+          Container(
+            height: 320,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: FileTree(
+                files: f, selected: _selectedFile, onTap: _jumpToFile),
+          ),
+          const SizedBox(height: 14),
+          ..._cards(f),
+        ] else
+          Row(
+            key: _filesKey,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 300,
+                child: ValueListenableBuilder<double>(
+                  valueListenable: _treeOffset,
+                  builder: (_, off, child) => Transform.translate(
+                      offset: Offset(0, off), child: child),
+                  child: SizedBox(
+                    height: _treeH,
+                    child: FileTree(
+                        files: f, selected: _selectedFile, onTap: _jumpToFile),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _cards(f),
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }
+
+  List<Widget> _cards(List<GhFileChange> f) => [
+        for (final x in f)
+          DiffFileCard(x,
+              key: _fileKeys.putIfAbsent(x.filename, () => GlobalKey())),
+      ];
 }
