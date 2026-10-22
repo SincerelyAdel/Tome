@@ -1,8 +1,9 @@
 name: Build Flutter APK
 
+# Runs only when started by hand. Day-to-day APKs come from the
+# SincerelyAdel/apk-builder repo (RepoViewer → APKs → Build APK), so pushes
+# here spend no Actions minutes.
 on:
-  push:
-    branches: [main, 'ccr-*']
   workflow_dispatch:
 
 permissions:

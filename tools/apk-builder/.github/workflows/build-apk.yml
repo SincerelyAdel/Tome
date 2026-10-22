@@ -18,6 +18,10 @@ on:
         type: choice
         options: [arm64, all]
         default: arm64
+      flutter:
+        description: Flutter version (blank = the repo's .flutter-version or .fvmrc, else latest stable)
+        required: false
+        default: ''
 
 run-name: Build ${{ inputs.repo }} ${{ inputs.ref }}
 
@@ -40,7 +44,8 @@ jobs:
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
-          token: ${{ secrets.SOURCE_TOKEN }}
+          # Public repos need no token; private ones need SOURCE_TOKEN.
+          token: ${{ secrets.SOURCE_TOKEN || github.token }}
           path: src
 
       - name: Detect the project
@@ -48,6 +53,7 @@ jobs:
         working-directory: src
         env:
           REPO: ${{ inputs.repo }}
+          FLUTTER_INPUT: ${{ inputs.flutter }}
         run: |
           if [ -f pubspec.yaml ]; then kind=flutter
           elif [ -f gradlew ]; then kind=gradle
@@ -55,6 +61,14 @@ jobs:
             echo "::error::$REPO has no pubspec.yaml or gradlew at its root."
             exit 1
           fi
+          # Newer Flutter releases can reject an older project's Gradle, so
+          # use the version the project asks for when it says one.
+          fv="$FLUTTER_INPUT"
+          if [ -z "$fv" ] && [ -f .flutter-version ]; then fv=$(tr -d ' \r\n' < .flutter-version); fi
+          if [ -z "$fv" ] && [ -f .fvmrc ]; then
+            fv=$(sed -nE 's/.*"flutter"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' .fvmrc | head -1)
+          fi
+          echo "flutter=$fv" >> "$GITHUB_OUTPUT"
           echo "kind=$kind" >> "$GITHUB_OUTPUT"
           echo "name=${REPO#*/}" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
@@ -74,6 +88,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ steps.info.outputs.flutter }}
           cache: true
 
       - name: Build (Flutter)

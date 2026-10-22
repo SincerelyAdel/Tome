@@ -8,6 +8,10 @@ It builds Flutter apps (`pubspec.yaml` at the root) and Gradle apps
 (`gradlew` at the root), signs every APK with one key so new builds install
 as updates, and publishes them as a release of the builder repo.
 
+Flutter apps build with the Flutter version in the repo's `.flutter-version`
+file (or `.fvmrc`), else the latest stable. Pin one when a project's Gradle
+is older than the latest Flutter accepts.
+
 ## Set up
 
 1. Create a new repo, for example `apk-builder`, and copy
