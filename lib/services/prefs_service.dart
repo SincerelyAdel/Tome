@@ -1,3 +1,4 @@
+import '../app_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrefsService {
@@ -61,6 +62,7 @@ class PrefsService {
   static Future<void> setBuilderRepo(String repo) async {
     final p = await SharedPreferences.getInstance();
     await p.setString('apk_builder_repo', repo.trim());
+    builderRepo.value = repo.trim();
   }
 
   /// Where Build APK runs by default: "github" or "my-pc".

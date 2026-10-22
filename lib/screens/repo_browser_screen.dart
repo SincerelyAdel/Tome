@@ -11,6 +11,7 @@ import 'repo_tabs/commits_tab.dart';
 import 'repo_tabs/issues_tab.dart';
 import '../theme.dart';
 import '../widgets/delete_repo.dart';
+import '../app_nav.dart';
 
 class RepoBrowserScreen extends StatefulWidget {
   final String owner;
@@ -54,6 +55,8 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     super.initState();
     _github = GitHubService(token: widget.token);
     GitHubService.current = _github;
+    // The APK builder repo only shows its Actions.
+    if (isBuilderRepo(widget.owner, widget.repo)) return;
     _loadPath('');
     _github.getRepoInfo(widget.owner, widget.repo).then((info) {
       if (!mounted) return;
@@ -146,8 +149,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         '${widget.owner}_${widget.repo}',
         onProgress: (received, total) {
           if (total > 0) {
-            setState(
-                () => _downloadProgress = received / total);
+            setState(() => _downloadProgress = received / total);
           }
         },
       );
@@ -180,6 +182,13 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 800;
+    if (isBuilderRepo(widget.owner, widget.repo)) {
+      return ActionsScreen(
+          owner: widget.owner,
+          repo: widget.repo,
+          github: _github,
+          golden: true);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -192,9 +201,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
               isWide ? '${widget.owner} / ${widget.repo}' : widget.repo,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  color: AppColors.text,
-                  fontFamily: 'monospace',
-                  fontSize: 15),
+                  color: AppColors.text, fontFamily: 'monospace', fontSize: 15),
             ),
           ),
         ]),
@@ -205,14 +212,13 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             TextButton.icon(
               icon: Icon(Icons.play_circle_outline,
                   color: AppColors.warning, size: 18),
-              label: Text('Actions',
-                  style: TextStyle(color: AppColors.warning)),
+              label:
+                  Text('Actions', style: TextStyle(color: AppColors.warning)),
               onPressed: _openActions,
             )
           else
             IconButton(
-              icon: Icon(Icons.play_circle_outline,
-                  color: AppColors.warning),
+              icon: Icon(Icons.play_circle_outline, color: AppColors.warning),
               tooltip: 'Actions',
               onPressed: _openActions,
             ),
@@ -228,13 +234,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                     LinearProgressIndicator(
                       value: _downloadProgress,
                       backgroundColor: AppColors.border,
-                      valueColor: AlwaysStoppedAnimation(
-                          AppColors.accent),
+                      valueColor: AlwaysStoppedAnimation(AppColors.accent),
                     ),
                     Text(
                       '${(_downloadProgress * 100).toInt()}%',
-                      style: TextStyle(
-                          color: AppColors.muted, fontSize: 11),
+                      style: TextStyle(color: AppColors.muted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -242,8 +246,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             )
           else if (isWide)
             TextButton.icon(
-              icon: Icon(Icons.download,
-                  color: AppColors.success, size: 18),
+              icon: Icon(Icons.download, color: AppColors.success, size: 18),
               label: Text('Download ZIP',
                   style: TextStyle(color: AppColors.success)),
               onPressed: _downloadZip,
@@ -363,8 +366,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
               borderRadius: BorderRadius.circular(6),
               onTap: () => setState(() => _tab = 4),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(6),
@@ -379,8 +381,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                           color: AppColors.text,
                           fontFamily: 'monospace',
                           fontSize: 12.5)),
-                  Icon(Icons.arrow_drop_down,
-                      size: 16, color: AppColors.muted),
+                  Icon(Icons.arrow_drop_down, size: 16, color: AppColors.muted),
                 ]),
               ),
             ),
@@ -399,9 +400,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             child: Text(
               widget.repo,
               style: TextStyle(
-                color: _pathStack.isEmpty
-                    ? AppColors.text
-                    : AppColors.accent,
+                color: _pathStack.isEmpty ? AppColors.text : AppColors.accent,
                 fontFamily: 'monospace',
                 fontSize: 13,
               ),
@@ -409,8 +408,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           ),
           ..._pathStack.asMap().entries.map((e) => Row(children: [
                 Text(' / ',
-                    style: TextStyle(
-                        color: AppColors.faint, fontSize: 13)),
+                    style: TextStyle(color: AppColors.faint, fontSize: 13)),
                 InkWell(
                   onTap: e.key < _pathStack.length - 1
                       ? () => _navigateToBreadcrumb(e.key)
@@ -460,39 +458,29 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     }
 
     return ListView.builder(
-      itemCount: _currentItems.length +
-          (_pathStack.isNotEmpty ? 1 : 0),
+      itemCount: _currentItems.length + (_pathStack.isNotEmpty ? 1 : 0),
       itemBuilder: (context, i) {
         if (_pathStack.isNotEmpty && i == 0) {
           return ListTile(
-            leading: Icon(Icons.arrow_upward,
-                color: AppColors.muted, size: 20),
+            leading: Icon(Icons.arrow_upward, color: AppColors.muted, size: 20),
             title: Text('..',
-                style: TextStyle(
-                    color: AppColors.muted,
-                    fontFamily: 'monospace')),
+                style:
+                    TextStyle(color: AppColors.muted, fontFamily: 'monospace')),
             dense: true,
             onTap: _navigateBack,
           );
         }
-        final item = _currentItems[
-            i - (_pathStack.isNotEmpty ? 1 : 0)];
+        final item = _currentItems[i - (_pathStack.isNotEmpty ? 1 : 0)];
         final isSelected = _selectedItem?.path == item.path;
         return Material(
-          color: isSelected
-              ? AppColors.surfaceAlt
-              : Colors.transparent,
+          color: isSelected ? AppColors.surfaceAlt : Colors.transparent,
           child: ListTile(
             leading: FileIcon(
-                name: item.name,
-                isDirectory: item.isDirectory,
-                size: 20),
+                name: item.name, isDirectory: item.isDirectory, size: 20),
             title: Text(
               item.name,
               style: TextStyle(
-                color: isSelected
-                    ? AppColors.accent
-                    : AppColors.text,
+                color: isSelected ? AppColors.accent : AppColors.text,
                 fontFamily: 'monospace',
                 fontSize: 13,
               ),
@@ -500,8 +488,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             trailing: item.isFile && item.size != null
                 ? Text(
                     _formatSize(item.size!),
-                    style: TextStyle(
-                        color: AppColors.faint, fontSize: 11),
+                    style: TextStyle(color: AppColors.faint, fontSize: 11),
                   )
                 : item.isDirectory
                     ? Icon(Icons.chevron_right,
@@ -521,13 +508,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.touch_app,
-                color: AppColors.border, size: 56),
+            Icon(Icons.touch_app, color: AppColors.border, size: 56),
             const SizedBox(height: 12),
             Text(
               'Select a file to view',
-              style: TextStyle(
-                  color: AppColors.muted, fontSize: 14),
+              style: TextStyle(color: AppColors.muted, fontSize: 14),
             ),
           ],
         ),
@@ -609,7 +594,8 @@ class _RepoTabBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
         child: Row(children: [
-          Icon(icon, size: 17, color: active ? AppColors.text : AppColors.muted),
+          Icon(icon,
+              size: 17, color: active ? AppColors.text : AppColors.muted),
           const SizedBox(width: 8),
           Text(label,
               style: TextStyle(

@@ -30,7 +30,11 @@ class ActionsScreen extends StatefulWidget {
     required this.owner,
     required this.repo,
     required this.github,
+    this.golden = false,
   });
+
+  /// Drawn in gold: the APK builder repo, which only has Actions.
+  final bool golden;
 
   @override
   State<ActionsScreen> createState() => _ActionsScreenState();
@@ -164,8 +168,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
     if (go != true || !mounted) return;
     final ok = await runAction(
         context,
-        () => widget.github
-            .dispatchWorkflow(widget.owner, widget.repo, w.id, ctrl.text.trim()),
+        () => widget.github.dispatchWorkflow(
+            widget.owner, widget.repo, w.id, ctrl.text.trim()),
         done: 'Workflow started. It appears here in a few seconds.');
     if (ok) Future.delayed(const Duration(seconds: 4), _load);
   }
@@ -184,17 +188,42 @@ class _ActionsScreenState extends State<ActionsScreen> {
     ).then((_) => _load());
   }
 
+  Widget _goldBar() => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.button, AppColors.accentLight, AppColors.accent],
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        iconTheme: IconThemeData(color: AppColors.text),
-        title: Text('Actions · ${widget.repo}'),
+        iconTheme: IconThemeData(
+            color: widget.golden ? AppColors.onButton : AppColors.text),
+        backgroundColor: widget.golden ? AppColors.button : null,
+        flexibleSpace: widget.golden ? _goldBar() : null,
+        title: widget.golden
+            ? Row(children: [
+                Icon(Icons.precision_manufacturing_outlined,
+                    color: AppColors.onButton, size: 20),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text('APK builder · ${widget.repo}',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: AppColors.onButton,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ])
+            : Text('Actions · ${widget.repo}'),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: AppColors.muted),
+            icon: Icon(Icons.refresh,
+                color: widget.golden ? AppColors.onButton : AppColors.muted),
             tooltip: 'Refresh',
             onPressed: _load,
           ),
@@ -217,7 +246,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
     Widget item(Workflow? w) {
       final active = w == _workflow;
       return _NavItem(
-        icon: w == null ? Icons.play_circle_outline : Icons.account_tree_outlined,
+        icon:
+            w == null ? Icons.play_circle_outline : Icons.account_tree_outlined,
         label: w?.name ?? 'All workflows',
         active: active,
         onTap: () => _pick(w),
@@ -587,10 +617,12 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
         _rawLogs[job.id] = raw;
         _logs[job.id] = parsed;
         // Open failed steps, like GitHub does.
-        _openSteps.putIfAbsent(job.id, () => {
-              for (var i = 0; i < job.steps.length; i++)
-                if (job.steps[i].conclusion == 'failure') i
-            });
+        _openSteps.putIfAbsent(
+            job.id,
+            () => {
+                  for (var i = 0; i < job.steps.length; i++)
+                    if (job.steps[i].conclusion == 'failure') i
+                });
       });
     } catch (e) {
       if (mounted) setState(() => _logErrors[job.id] = _msg(e));
@@ -767,8 +799,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
             TextButton.icon(
               onPressed: _cancelRun,
               icon: Icon(Icons.stop_circle_outlined, color: AppColors.danger),
-              label: Text('Cancel run',
-                  style: TextStyle(color: AppColors.danger)),
+              label:
+                  Text('Cancel run', style: TextStyle(color: AppColors.danger)),
             ),
           if (_gh.hasToken && !run.isRunning)
             PopupMenuButton<String>(
@@ -973,7 +1005,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           children: [
             cell(
               'Triggered via ${run.event.replaceAll('_', ' ')} '
-                  '${timeAgo(run.createdAt)}',
+              '${timeAgo(run.createdAt)}',
               Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 6,
@@ -1001,10 +1033,14 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
                 ],
               ),
             ),
-            cell('Status', Text(statusLabel(run.status, run.conclusion), style: big)),
-            cell('Total duration', Text(formatDuration(run.duration), style: big)),
-            cell('Artifacts',
-                Text(artifacts == null ? '–' : '${artifacts.length}', style: big)),
+            cell('Status',
+                Text(statusLabel(run.status, run.conclusion), style: big)),
+            cell('Total duration',
+                Text(formatDuration(run.duration), style: big)),
+            cell(
+                'Artifacts',
+                Text(artifacts == null ? '–' : '${artifacts.length}',
+                    style: big)),
             if (run.runAttempt > 1)
               cell('Attempt', Text('#${run.runAttempt}', style: big)),
           ],
@@ -1056,10 +1092,11 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
       ),
       if (annotations.isNotEmpty) ...[
         const SizedBox(height: 24),
-        _sectionTitle('Annotations',
+        _sectionTitle(
+            'Annotations',
             '${errors > 0 ? '$errors error${errors == 1 ? '' : 's'}' : ''}'
-            '${errors > 0 && warnings > 0 ? ' and ' : ''}'
-            '${warnings > 0 ? '$warnings warning${warnings == 1 ? '' : 's'}' : ''}'),
+                '${errors > 0 && warnings > 0 ? ' and ' : ''}'
+                '${warnings > 0 ? '$warnings warning${warnings == 1 ? '' : 's'}' : ''}'),
         _box(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1141,9 +1178,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        border: last
-            ? null
-            : Border(bottom: BorderSide(color: AppColors.border)),
+        border:
+            last ? null : Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, size: 18, color: color),
@@ -1225,7 +1261,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           ListTile(
             leading: Icon(Icons.inventory_2_outlined, color: AppColors.muted),
             title: Text(a.name,
-                style: TextStyle(color: AppColors.text, fontFamily: 'monospace')),
+                style:
+                    TextStyle(color: AppColors.text, fontFamily: 'monospace')),
             subtitle: Text(
               [
                 a.expired ? 'Expired' : _size(a.sizeInBytes),
@@ -1300,8 +1337,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
         TextButton(
           onPressed: () => _openFile(f),
           child: Text(apk ? 'Install' : 'Open',
-              style: TextStyle(
-                  color: apk ? AppColors.success : AppColors.accent)),
+              style:
+                  TextStyle(color: apk ? AppColors.success : AppColors.accent)),
         ),
       ]),
     );
@@ -1478,7 +1515,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           Icon(expanded ? Icons.expand_more : Icons.chevron_right,
               size: 20, color: AppColors.muted),
           const SizedBox(width: 6),
-          StatusIcon(status: step.status, conclusion: step.conclusion, size: 17),
+          StatusIcon(
+              status: step.status, conclusion: step.conclusion, size: 17),
           const SizedBox(width: 10),
           Expanded(
             child: Text(step.name,
@@ -1587,8 +1625,8 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
 
   Widget _plainNote(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(46, 6, 16, 10),
-        child: Text(text,
-            style: TextStyle(color: AppColors.muted, fontSize: 13)),
+        child:
+            Text(text, style: TextStyle(color: AppColors.muted, fontSize: 13)),
       );
 
   // ---------------------------------------------------------------- usage
@@ -1653,17 +1691,17 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                       child: Text(jobs[i].name,
-                          style: TextStyle(
-                              color: AppColors.text, fontSize: 14))),
-                  Text(
-                      jobs[i].labels.isEmpty ? '' : jobs[i].labels.first,
+                          style:
+                              TextStyle(color: AppColors.text, fontSize: 14))),
+                  Text(jobs[i].labels.isEmpty ? '' : jobs[i].labels.first,
                       style: label),
                   const SizedBox(width: 20),
                   SizedBox(
                     width: 80,
                     child: Text(formatDuration(jobs[i].duration),
                         textAlign: TextAlign.right,
-                        style: TextStyle(color: AppColors.text, fontSize: 13.5)),
+                        style:
+                            TextStyle(color: AppColors.text, fontSize: 13.5)),
                   ),
                 ]),
               ),
@@ -1700,8 +1738,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
               theme: {
                 ..._codeTheme,
                 'root': _codeTheme['root']!.copyWith(
-                    backgroundColor: Colors.transparent,
-                    color: AppColors.text),
+                    backgroundColor: Colors.transparent, color: AppColors.text),
               },
               padding: const EdgeInsets.all(18),
               textStyle: const TextStyle(
@@ -1798,7 +1835,8 @@ class _NavItem extends StatelessWidget {
             ),
             child: Row(children: [
               leading ??
-                  Icon(icon, size: 18,
+                  Icon(icon,
+                      size: 18,
                       color: active ? AppColors.text : AppColors.muted),
               const SizedBox(width: 10),
               Expanded(
@@ -1808,7 +1846,8 @@ class _NavItem extends StatelessWidget {
                     style: TextStyle(
                         color: AppColors.text,
                         fontSize: 13.5,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400)),
+                        fontWeight:
+                            active ? FontWeight.w600 : FontWeight.w400)),
               ),
               if (trailing != null) ...[const SizedBox(width: 6), trailing!],
             ]),
@@ -1867,14 +1906,17 @@ class StatusIcon extends StatelessWidget {
     }
     return switch (conclusion) {
       'success' => Icon(Icons.check_circle, color: ghOpen, size: size),
-      'failure' || 'timed_out' || 'startup_failure' =>
+      'failure' ||
+      'timed_out' ||
+      'startup_failure' =>
         Icon(Icons.cancel, color: ghClosed, size: size),
       'cancelled' => Icon(Icons.block, color: AppColors.muted, size: size),
-      'skipped' =>
-        Icon(Icons.do_not_disturb_on_outlined, color: AppColors.faint, size: size),
+      'skipped' => Icon(Icons.do_not_disturb_on_outlined,
+          color: AppColors.faint, size: size),
       'action_required' =>
         Icon(Icons.error_outline, color: AppColors.warning, size: size),
-      _ => Icon(Icons.remove_circle_outline, color: AppColors.muted, size: size),
+      _ =>
+        Icon(Icons.remove_circle_outline, color: AppColors.muted, size: size),
     };
   }
 }

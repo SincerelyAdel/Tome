@@ -18,6 +18,7 @@ Future<void> main() async {
   ]);
   _hideSystemBars();
   AppTheme.set(await PrefsService.getDarkMode());
+  builderRepo.value = await PrefsService.getBuilderRepo();
   runApp(const RepoViewerApp());
 }
 

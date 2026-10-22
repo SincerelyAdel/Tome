@@ -207,8 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       hPad: hPad,
                       onOpenRepo: (owner, repo) => _openRepo(owner, repo, i),
                       onOpenProfile: (login) => _openProfile(login, i),
-                      onClearTyped: () =>
-                          setState(() => _typedOwner[i] = null),
+                      onClearTyped: () => setState(() => _typedOwner[i] = null),
                       onOpenSettings: _openSettings,
                     ),
                   ),
@@ -336,10 +335,9 @@ class _PageDots extends StatelessWidget {
     if (c == null) return dots(page.toDouble());
     return AnimatedBuilder(
       animation: c,
-      builder: (context, _) => dots(
-          c.hasClients && c.position.haveDimensions
-              ? c.page ?? page.toDouble()
-              : page.toDouble()),
+      builder: (context, _) => dots(c.hasClients && c.position.haveDimensions
+          ? c.page ?? page.toDouble()
+          : page.toDouble()),
     );
   }
 }
@@ -427,6 +425,7 @@ class _AccountPageState extends State<_AccountPage>
     super.initState();
     _filterCtrl.addListener(() => setState(() {}));
     reposChanged.addListener(_reload);
+    builderRepo.addListener(_redraw);
     _reload();
   }
 
@@ -509,6 +508,15 @@ class _AccountPageState extends State<_AccountPage>
           ? await github.getMyRepos()
           : await github.getUserRepos(widget.owner!);
       if (old(request)) return;
+      // No builder chosen yet: adopt the user's own "apk-builder" repo.
+      if (builderRepo.value.isEmpty && widget.owner == null) {
+        for (final r in repos) {
+          if (r.name.toLowerCase() == 'apk-builder') {
+            PrefsService.setBuilderRepo('${r.owner}/${r.name}');
+            break;
+          }
+        }
+      }
       setState(() {
         _repos = repos;
         _loading = false;
@@ -571,41 +579,42 @@ class _AccountPageState extends State<_AccountPage>
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.surfaceAlt,
-            foregroundImage: (_avatarUrl ?? '').isNotEmpty &&
-                    widget.owner == null
-                ? NetworkImage(_avatarUrl!)
-                : widget.owner != null && widget.owner!.isNotEmpty
-                    ? NetworkImage(
-                        'https://github.com/${widget.owner}.png?size=96')
-                    : null,
-            child: Icon(Icons.person_outline, color: AppColors.muted),
-          ),
-          const SizedBox(width: 14),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontFamily: kSerif,
-                        color: AppColors.text,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: TextStyle(color: AppColors.muted, fontSize: 13)),
-              ],
-            ),
-          ),
-          if (login != null) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: AppColors.faint),
-          ],
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: AppColors.surfaceAlt,
+                    foregroundImage: (_avatarUrl ?? '').isNotEmpty &&
+                            widget.owner == null
+                        ? NetworkImage(_avatarUrl!)
+                        : widget.owner != null && widget.owner!.isNotEmpty
+                            ? NetworkImage(
+                                'https://github.com/${widget.owner}.png?size=96')
+                            : null,
+                    child: Icon(Icons.person_outline, color: AppColors.muted),
+                  ),
+                  const SizedBox(width: 14),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontFamily: kSerif,
+                                color: AppColors.text,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Text(subtitle,
+                            style: TextStyle(
+                                color: AppColors.muted, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  if (login != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right, color: AppColors.faint),
+                  ],
                 ]),
               ),
             ),
@@ -627,10 +636,8 @@ class _AccountPageState extends State<_AccountPage>
                   child: Image.network(o.avatarUrl,
                       width: 20,
                       height: 20,
-                      errorBuilder: (_, __, ___) => Icon(
-                          Icons.corporate_fare,
-                          size: 16,
-                          color: AppColors.muted)),
+                      errorBuilder: (_, __, ___) => Icon(Icons.corporate_fare,
+                          size: 16, color: AppColors.muted)),
                 ),
                 label: Text(o.login),
                 labelStyle: TextStyle(
@@ -732,70 +739,90 @@ class _AccountPageState extends State<_AccountPage>
       if (r.updatedAt != null) 'Updated ${_ago(r.updatedAt!)}',
     ];
     final pad = wide ? 20.0 : 14.0;
+    final gold = isBuilderRepo(r.owner, r.name);
+    final fg = gold ? AppColors.onButton : AppColors.text;
+    final sub = gold ? AppColors.onButton.withOpacity(0.75) : AppColors.muted;
+    final faint = gold ? AppColors.onButton.withOpacity(0.6) : AppColors.faint;
     return Material(
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: gold ? AppColors.accent : AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => widget.onOpenRepo(r.owner, r.name),
         onLongPress: () => _repoMenu(r),
-        child: Padding(
-          padding: EdgeInsets.all(pad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Icon(Icons.book_outlined, size: 18, color: AppColors.accent),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(children: [
-                      if (showOwner)
-                        TextSpan(
-                            text: '${r.owner} / ',
-                            style: TextStyle(
-                                color: AppColors.muted,
-                                fontWeight: FontWeight.w400)),
-                      TextSpan(text: r.name),
-                    ]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: wide ? 18 : 16,
-                        fontWeight: FontWeight.w600),
+        child: Ink(
+          decoration: gold
+              ? BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.accentLight,
+                      AppColors.button,
+                      AppColors.accent,
+                    ],
                   ),
+                )
+              : null,
+          child: Padding(
+            padding: EdgeInsets.all(pad),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(
+                      gold
+                          ? Icons.precision_manufacturing_outlined
+                          : Icons.book_outlined,
+                      size: 18,
+                      color: gold ? fg : AppColors.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        if (showOwner)
+                          TextSpan(
+                              text: '${r.owner} / ',
+                              style: TextStyle(
+                                  color: sub, fontWeight: FontWeight.w400)),
+                        TextSpan(text: r.name),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: fg,
+                          fontSize: wide ? 18 : 16,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (r.isPrivate) _badge(Icons.lock_outline, 'Private', wide),
+                  if (r.isFork) _badge(Icons.call_split, 'Fork', wide),
+                ]),
+                const SizedBox(height: 8),
+                // Loose fit: the meta line follows the text directly and any
+                // spare height goes to the bottom of the card.
+                Flexible(
+                  child: Text(
+                      r.description.isEmpty ? 'No description' : r.description,
+                      maxLines: wide ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: r.description.isEmpty ? faint : sub,
+                          fontSize: wide ? 14.5 : 13,
+                          height: 1.4)),
                 ),
-                if (r.isPrivate) _badge(Icons.lock_outline, 'Private', wide),
-                if (r.isFork) _badge(Icons.call_split, 'Fork', wide),
-              ]),
-              const SizedBox(height: 8),
-              // Loose fit: the meta line follows the text directly and any
-              // spare height goes to the bottom of the card.
-              Flexible(
-                child: Text(
-                    r.description.isEmpty ? 'No description' : r.description,
-                    maxLines: wide ? 2 : 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: r.description.isEmpty
-                            ? AppColors.faint
-                            : AppColors.muted,
-                        fontSize: wide ? 14.5 : 13,
-                        height: 1.4)),
-              ),
-              if (meta.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(meta.join('  ·  '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: AppColors.faint, fontSize: wide ? 13 : 12)),
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(meta.join('  ·  '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: faint, fontSize: wide ? 13 : 12)),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -824,8 +851,7 @@ class _AccountPageState extends State<_AccountPage>
     return ListView(
       padding: EdgeInsets.fromLTRB(hPad, 48, hPad, 32),
       children: [
-        Icon(Icons.person_add_alt_1_outlined,
-            size: 56, color: AppColors.faint),
+        Icon(Icons.person_add_alt_1_outlined, size: 56, color: AppColors.faint),
         const SizedBox(height: 16),
         Text(widget.index == 0 ? 'Welcome to RepoViewer' : 'Account 2',
             textAlign: TextAlign.center,
@@ -858,9 +884,14 @@ class _AccountPageState extends State<_AccountPage>
     );
   }
 
+  void _redraw() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     reposChanged.removeListener(_reload);
+    builderRepo.removeListener(_redraw);
     _filterCtrl.dispose();
     super.dispose();
   }
