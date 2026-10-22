@@ -9,7 +9,8 @@ explaining files with Claude, and installing CI builds.
 
 - **Repo grid** — your repos (incl. private, with a token) in a two-column grid, or any user's public repos; type a username to switch
 - **Two GitHub accounts** — swipe left/right on the home screen to switch between them
-- **Browse** any GitHub repository with a file tree
+- **Browse** any GitHub repository with a file tree, on any branch
+- **Repo tabs** — Code, Issues, Pull requests (with comments), Commits (with diffs) and Branches, like GitHub
 - **View** source files with syntax highlighting (Verilog, Dart, Python, etc.)
 - **Download ZIP** of the entire repository directly to your Downloads folder
 - **AI Explain** — tap "Explain" on any file for a concise Claude summary

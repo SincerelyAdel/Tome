@@ -607,7 +607,7 @@ class _AccountPageState extends State<_AccountPage>
             crossAxisCount: 2,
             mainAxisSpacing: wide ? 16 : 10,
             crossAxisSpacing: wide ? 16 : 10,
-            mainAxisExtent: wide ? 172 : 190,
+            mainAxisExtent: wide ? 142 : 158,
           ),
           delegate: SliverChildBuilderDelegate(
             (context, i) => _repoCard(repos[i], wide),
@@ -669,10 +669,12 @@ class _AccountPageState extends State<_AccountPage>
                 if (r.isFork) _badge(Icons.call_split, 'Fork', wide),
               ]),
               const SizedBox(height: 8),
-              Expanded(
+              // Loose fit: the meta line follows the text directly and any
+              // spare height goes to the bottom of the card.
+              Flexible(
                 child: Text(
                     r.description.isEmpty ? 'No description' : r.description,
-                    maxLines: wide ? 3 : 4,
+                    maxLines: wide ? 2 : 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: r.description.isEmpty
@@ -681,12 +683,14 @@ class _AccountPageState extends State<_AccountPage>
                         fontSize: wide ? 14.5 : 13,
                         height: 1.4)),
               ),
-              if (meta.isNotEmpty)
+              if (meta.isNotEmpty) ...[
+                const SizedBox(height: 10),
                 Text(meta.join('  ·  '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: AppColors.faint, fontSize: wide ? 13 : 12)),
+              ],
             ],
           ),
         ),

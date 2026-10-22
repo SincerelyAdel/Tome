@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/actions.dart';
+import '../models/github_models.dart';
 import '../models/repo_item.dart';
 
 class GitHubService {
@@ -26,11 +27,13 @@ class GitHubService {
     throw Exception('Failed to load repo: ${response.statusCode}');
   }
 
-  Future<List<RepoItem>> getContents(
-      String owner, String repo, String path) async {
+  /// [ref] is a branch name; null means the default branch.
+  Future<List<RepoItem>> getContents(String owner, String repo, String path,
+      {String? ref}) async {
     final encodedPath = path.isEmpty ? '' : '/$path';
     final response = await http.get(
-      Uri.parse('$_baseUrl/repos/$owner/$repo/contents$encodedPath'),
+      Uri.parse('$_baseUrl/repos/$owner/$repo/contents$encodedPath'
+          '${_refQuery(ref)}'),
       headers: _headers,
     );
     if (response.statusCode == 200) {
@@ -47,9 +50,10 @@ class GitHubService {
     throw Exception('Failed to load contents: ${response.statusCode}');
   }
 
-  Future<String> getFileContent(String owner, String repo, String path) async {
+  Future<String> getFileContent(String owner, String repo, String path,
+      {String? ref}) async {
     final response = await http.get(
-      Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path'),
+      Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path${_refQuery(ref)}'),
       headers: _headers,
     );
     if (response.statusCode == 200) {
@@ -65,6 +69,77 @@ class GitHubService {
   Future<List<RepoInfo>> getMyRepos() async {
     return _getRepoList('$_baseUrl/user/repos?per_page=100&sort=pushed'
         '&affiliation=owner,collaborator,organization_member');
+  }
+
+  static String _refQuery(String? ref) =>
+      ref == null ? '' : '?ref=${Uri.encodeQueryComponent(ref)}';
+
+  Future<List<dynamic>> _getList(String url, String what) async {
+    final response = await http.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    }
+    if (response.statusCode == 403) {
+      throw Exception('GitHub rate limit hit or access denied.');
+    }
+    throw Exception('Failed to load $what: ${response.statusCode}');
+  }
+
+  /// Issues only (GitHub's /issues also returns PRs; those are dropped).
+  Future<List<GhIssue>> getIssues(String owner, String repo,
+      {bool open = true}) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/issues'
+        '?state=${open ? 'open' : 'closed'}&per_page=100',
+        'issues');
+    return list
+        .where((e) => e['pull_request'] == null)
+        .map((e) => GhIssue.fromJson(e))
+        .toList();
+  }
+
+  Future<List<GhIssue>> getPulls(String owner, String repo,
+      {bool open = true}) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/pulls'
+        '?state=${open ? 'open' : 'closed'}&per_page=100',
+        'pull requests');
+    return list.map((e) => GhIssue.fromJson(e)).toList();
+  }
+
+  /// Comments on an issue or a pull request.
+  Future<List<GhComment>> getComments(
+      String owner, String repo, int number) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/issues/$number/comments?per_page=100',
+        'comments');
+    return list.map((e) => GhComment.fromJson(e)).toList();
+  }
+
+  Future<List<GhCommit>> getCommits(String owner, String repo,
+      {String? branch}) async {
+    final sha = branch == null ? '' : '&sha=${Uri.encodeQueryComponent(branch)}';
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/commits?per_page=100$sha', 'commits');
+    return list.map((e) => GhCommit.fromJson(e)).toList();
+  }
+
+  /// One commit with its changed files and diffs.
+  Future<GhCommit> getCommit(String owner, String repo, String sha) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/repos/$owner/$repo/commits/$sha'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return GhCommit.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load commit: ${response.statusCode}');
+  }
+
+  Future<List<GhBranch>> getBranches(String owner, String repo) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/branches?per_page=100', 'branches');
+    return list.map((e) => GhBranch.fromJson(e)).toList();
   }
 
   /// The token owner's login and avatar URL.

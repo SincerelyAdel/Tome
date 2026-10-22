@@ -16,12 +16,16 @@ class FileViewerScreen extends StatefulWidget {
   final String repo;
   final GitHubService github;
 
+  /// Branch to read from; null means the default branch.
+  final String? branch;
+
   const FileViewerScreen({
     super.key,
     required this.item,
     required this.owner,
     required this.repo,
     required this.github,
+    this.branch,
   });
 
   @override
@@ -44,7 +48,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   Future<void> _loadFile() async {
     try {
       final content = await widget.github
-          .getFileContent(widget.owner, widget.repo, widget.item.path);
+          .getFileContent(widget.owner, widget.repo, widget.item.path,
+              ref: widget.branch);
       setState(() {
         _content = content;
         _loading = false;
