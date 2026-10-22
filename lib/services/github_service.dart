@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/actions.dart';
 import '../models/github_models.dart';
@@ -259,6 +259,45 @@ class GitHubService {
   }
 
   bool get hasToken => token != null && token!.isNotEmpty;
+
+  /// Calls any REST endpoint ([path] starts with '/') and returns the
+  /// decoded JSON, or null for an empty reply. Failures throw an
+  /// [ApiException] carrying GitHub's own message.
+  Future<dynamic> api(String path,
+      {String method = 'GET', Object? body}) async {
+    final request = http.Request(method, Uri.parse('$_baseUrl$path'))
+      ..headers.addAll(_headers);
+    if (body != null) {
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode(body);
+    }
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final text = utf8.decode(response.bodyBytes, allowMalformed: true);
+      return text.trim().isEmpty ? null : jsonDecode(text);
+    }
+    throw ApiException.from(response.statusCode, response.body, hasToken);
+  }
+
+  /// Runs a GraphQL query; returns `data`. Needs a token.
+  Future<Map<String, dynamic>> graphql(
+      String query, Map<String, dynamic> variables) async {
+    if (!hasToken) {
+      throw const ApiException(401, 'This needs a GitHub token. Add one in Settings.');
+    }
+    final response = await http.post(Uri.parse('$_baseUrl/graphql'),
+        headers: _headers,
+        body: jsonEncode({'query': query, 'variables': variables}));
+    if (response.statusCode != 200) {
+      throw ApiException.from(response.statusCode, response.body, hasToken);
+    }
+    final json = jsonDecode(utf8.decode(response.bodyBytes));
+    final errors = json['errors'] as List?;
+    if (json['data'] == null && errors != null && errors.isNotEmpty) {
+      throw ApiException(200, errors.first['message']?.toString() ?? 'GraphQL error');
+    }
+    return (json['data'] as Map<String, dynamic>?) ?? {};
+  }
 
   /// The app-wide service for the account in use, so screens opened from
   /// anywhere (like a profile from an @mention) use the right token.
@@ -527,3 +566,38 @@ class GitHubService {
     return null;
   }
 }
+
+/// A failed GitHub API call, with a message a person can act on.
+class ApiException implements Exception {
+  final int status;
+  final String message;
+
+  const ApiException(this.status, this.message);
+
+  factory ApiException.from(int status, String body, bool hasToken) {
+    var gh = '';
+    try {
+      gh = (jsonDecode(body)['message'] ?? '').toString().replaceAll(RegExp(r'\.+$'), '');
+    } catch (_) {}
+    final text = switch (status) {
+      401 => 'GitHub rejected the token. Check it in Settings.',
+      403 when gh.toLowerCase().contains('rate limit') =>
+        'GitHub rate limit hit. Try again in a few minutes.',
+      403 => hasToken
+          ? 'Your token isn\'t allowed to do this${gh.isEmpty ? '' : ' ($gh)'}. '
+              'It may need more scopes, such as read:org or admin:org.'
+          : 'This needs a GitHub token. Add one in Settings.',
+      404 => hasToken
+          ? 'Not found, or your token can\'t see it. Owner-only pages need '
+              'scopes such as read:org or admin:org.'
+          : 'Not found. Private and owner-only data needs a token.',
+      409 || 405 || 422 => gh.isEmpty ? 'GitHub refused ($status).' : gh,
+      _ => gh.isEmpty ? 'GitHub error $status.' : '$gh ($status)',
+    };
+    return ApiException(status, text);
+  }
+
+  @override
+  String toString() => message;
+}
+

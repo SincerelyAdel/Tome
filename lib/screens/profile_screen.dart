@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/github_models.dart';
 import '../models/repo_item.dart';
+import '../services/github_org.dart';
 import '../services/github_service.dart';
 import '../theme.dart';
 import '../widgets/gh_markdown.dart';
 import '../widgets/gh_widgets.dart';
+import 'org/org_screen.dart';
 import 'repo_browser_screen.dart';
 
 /// A GitHub profile laid out like github.com: avatar and details on the
@@ -30,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _readmeLoaded = false;
   GhProfileExtras? _extras;
   List<RepoInfo>? _repos;
+  List<GhUser> _orgs = [];
   String? _reposError;
   final _people = <int, List<GhUser>>{};
   final _peopleErrors = <int, String>{};
@@ -69,10 +72,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _gh.getProfileExtras(p.login, isOrg: p.isOrg).then((x) {
         if (mounted) setState(() => _extras = x);
       }).catchError((_) {});
-      _loadRepos();
+      if (!p.isOrg) {
+        _loadRepos();
+        _loadOrgs(p.login);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = _msg(e));
     }
+  }
+
+  /// Your own profile also lists private org memberships.
+  Future<void> _loadOrgs(String login) async {
+    try {
+      var own = false;
+      if (_gh.hasToken) {
+        try {
+          own = (await _gh.getViewer()).login.toLowerCase() ==
+              login.toLowerCase();
+        } catch (_) {}
+      }
+      final orgs = own ? await _gh.getMyOrgs() : await _gh.getUserOrgs(login);
+      if (mounted) setState(() => _orgs = orgs);
+    } catch (_) {}
   }
 
   Future<void> _loadRepos() async {
@@ -115,6 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final p = _profile;
+    if (p != null && p.isOrg) return OrgScreen(profile: p, github: _gh);
     final wide = MediaQuery.of(context).size.width > 900;
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -266,6 +288,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (p.createdAt != null)
           line(Icons.calendar_today_outlined,
               'Joined ${_monthYear(p.createdAt!)}'),
+        if (_orgs.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 14),
+          Text('Organizations',
+              style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          for (final o in _orgs)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => ProfileScreen(login: o.login, github: _gh)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(o.avatarUrl,
+                        width: 32,
+                        height: 32,
+                        errorBuilder: (_, __, ___) =>
+                            const SizedBox(width: 32, height: 32)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(o.login,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.faint),
+                ]),
+              ),
+            ),
+        ],
       ],
     );
   }

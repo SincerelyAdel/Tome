@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../app_nav.dart';
 import '../models/repo_item.dart';
+import '../models/github_models.dart';
+import '../services/github_org.dart';
 import '../services/github_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
@@ -408,6 +410,9 @@ class _AccountPageState extends State<_AccountPage>
   String? _login;
   String? _avatarUrl;
 
+  /// Organizations the token's account belongs to.
+  List<GhUser> _orgs = [];
+
   bool get _hasToken => (widget.token ?? '').isNotEmpty;
   bool get _notSetUp => widget.owner == '';
 
@@ -439,6 +444,7 @@ class _AccountPageState extends State<_AccountPage>
       if (!_hasToken) {
         _login = null;
         _avatarUrl = null;
+        _orgs = [];
       }
     });
     if (_notSetUp) return;
@@ -452,6 +458,9 @@ class _AccountPageState extends State<_AccountPage>
           _login = v.login;
           _avatarUrl = v.avatarUrl;
         });
+      }).catchError((_) {});
+      github.getMyOrgs().then((o) {
+        if (!old(request)) setState(() => _orgs = o);
       }).catchError((_) {});
     }
     try {
@@ -567,6 +576,34 @@ class _AccountPageState extends State<_AccountPage>
                   style: TextStyle(color: AppColors.accent)),
             ),
         ]),
+        if (_orgs.isNotEmpty && widget.owner == null) ...[
+          const SizedBox(height: 14),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final o in _orgs)
+              ActionChip(
+                avatar: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.network(o.avatarUrl,
+                      width: 20,
+                      height: 20,
+                      errorBuilder: (_, __, ___) => Icon(
+                          Icons.corporate_fare,
+                          size: 16,
+                          color: AppColors.muted)),
+                ),
+                label: Text(o.login),
+                labelStyle: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
+                backgroundColor: AppColors.surface,
+                side: BorderSide(color: AppColors.accent.withOpacity(0.45)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                onPressed: () => widget.onOpenProfile(o.login),
+              ),
+          ]),
+        ],
         if ((_repos?.length ?? 0) > 6) ...[
           const SizedBox(height: 16),
           TextField(

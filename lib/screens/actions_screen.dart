@@ -8,7 +8,9 @@ import 'package:flutter_highlight/themes/github.dart';
 import 'package:open_filex/open_filex.dart';
 import '../models/actions.dart';
 import '../services/artifact_service.dart';
+import '../services/github_org.dart';
 import '../services/github_service.dart';
+import '../widgets/loader.dart';
 import '../theme.dart';
 import '../widgets/gh_widgets.dart';
 import '../widgets/job_log.dart';
@@ -119,6 +121,52 @@ class _ActionsScreenState extends State<ActionsScreen> {
       _runs = null;
     });
     _load();
+  }
+
+  /// Starts the selected workflow (needs a workflow_dispatch trigger).
+  Future<void> _runWorkflow(Workflow w) async {
+    var branch = 'main';
+    try {
+      branch = (await widget.github.getRepoInfo(widget.owner, widget.repo))
+          .defaultBranch;
+    } catch (_) {}
+    if (!mounted) return;
+    final ctrl = TextEditingController(text: branch);
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Run ${w.name}', style: TextStyle(color: AppColors.text)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+              'Works for workflows with a workflow_dispatch trigger. '
+              'Inputs use their defaults.',
+              style: TextStyle(color: AppColors.muted, fontSize: 13)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl,
+            autocorrect: false,
+            style: TextStyle(color: AppColors.text, fontFamily: 'monospace'),
+            decoration: const InputDecoration(labelText: 'Branch or tag'),
+          ),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Run workflow')),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+    final ok = await runAction(
+        context,
+        () => widget.github
+            .dispatchWorkflow(widget.owner, widget.repo, w.id, ctrl.text.trim()),
+        done: 'Workflow started. It appears here in a few seconds.');
+    if (ok) Future.delayed(const Duration(seconds: 4), _load);
   }
 
   void _open(WorkflowRun run) {
@@ -243,11 +291,24 @@ class _ActionsScreenState extends State<ActionsScreen> {
                   if (_workflow != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(_workflow!.path,
-                          style: TextStyle(
-                              color: AppColors.muted,
-                              fontFamily: 'monospace',
-                              fontSize: 12.5)),
+                      child: Row(children: [
+                        Expanded(
+                          child: Text(_workflow!.path,
+                              style: TextStyle(
+                                  color: AppColors.muted,
+                                  fontFamily: 'monospace',
+                                  fontSize: 12.5)),
+                        ),
+                        if (widget.github.hasToken)
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: AppColors.onAccent),
+                            onPressed: () => _runWorkflow(_workflow!),
+                            icon: const Icon(Icons.play_arrow, size: 18),
+                            label: const Text('Run workflow'),
+                          ),
+                      ]),
                     ),
                 ],
               ),
@@ -556,6 +617,69 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     if (view == _workflowFile) _loadWorkflowFile();
   }
 
+  // -------------------------------------------------- re-run and cancel
+
+  Future<void> _rerun(String which) async {
+    final failed = which == 'failed';
+    if (!await confirmAction(context,
+        title: failed ? 'Re-run failed jobs?' : 'Re-run all jobs?',
+        message: 'Starts attempt #${_run.runAttempt + 1} of '
+            '${_run.name} #${_run.runNumber}.',
+        action: 'Re-run')) {
+      return;
+    }
+    if (!mounted) return;
+    final ok = await runAction(
+        context,
+        () => failed
+            ? _gh.rerunFailedJobs(widget.owner, widget.repo, _run.id)
+            : _gh.rerunRun(widget.owner, widget.repo, _run.id),
+        done: 'Re-run started');
+    if (ok) _afterChange();
+  }
+
+  Future<void> _rerunJob(WorkflowJob job) async {
+    if (!await confirmAction(context,
+        title: 'Re-run ${job.name}?',
+        message: 'Runs this job again, plus any jobs that depend on it.',
+        action: 'Re-run job')) {
+      return;
+    }
+    if (!mounted) return;
+    final ok = await runAction(
+        context, () => _gh.rerunJob(widget.owner, widget.repo, job.id),
+        done: 'Job re-run started');
+    if (ok) _afterChange();
+  }
+
+  Future<void> _cancelRun() async {
+    if (!await confirmAction(context,
+        title: 'Cancel this run?',
+        message: 'Stops ${_run.name} #${_run.runNumber} and every job still '
+            'running in it.',
+        action: 'Cancel run',
+        danger: true)) {
+      return;
+    }
+    if (!mounted) return;
+    final ok = await runAction(
+        context, () => _gh.cancelRun(widget.owner, widget.repo, _run.id),
+        done: 'Cancelling...');
+    if (ok) _afterChange();
+  }
+
+  /// A new attempt replaces jobs and logs; start fresh and poll.
+  void _afterChange() {
+    setState(() {
+      _logs.clear();
+      _rawLogs.clear();
+      _logErrors.clear();
+      _annotations.clear();
+      _timing = null;
+    });
+    Future.delayed(const Duration(seconds: 2), _refresh);
+  }
+
   // ------------------------------------------------------------ artifacts
 
   Future<void> _download(Artifact artifact) async {
@@ -628,6 +752,35 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           ),
         ]),
         actions: [
+          if (_gh.hasToken && run.isRunning)
+            TextButton.icon(
+              onPressed: _cancelRun,
+              icon: Icon(Icons.stop_circle_outlined, color: AppColors.danger),
+              label: Text('Cancel run',
+                  style: TextStyle(color: AppColors.danger)),
+            ),
+          if (_gh.hasToken && !run.isRunning)
+            PopupMenuButton<String>(
+              tooltip: 'Re-run',
+              onSelected: _rerun,
+              itemBuilder: (_) => [
+                if (run.conclusion != 'success')
+                  const PopupMenuItem(
+                      value: 'failed', child: Text('Re-run failed jobs')),
+                const PopupMenuItem(
+                    value: 'all', child: Text('Re-run all jobs')),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(children: [
+                  Icon(Icons.replay, color: AppColors.accent, size: 20),
+                  const SizedBox(width: 6),
+                  Text('Re-run jobs',
+                      style: TextStyle(color: AppColors.accent, fontSize: 14)),
+                  Icon(Icons.arrow_drop_down, color: AppColors.accent),
+                ]),
+              ),
+            ),
           IconButton(
             icon: Icon(Icons.refresh, color: AppColors.muted),
             tooltip: 'Refresh',
@@ -1254,6 +1407,12 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
             ),
           ),
         ),
+        if (_gh.hasToken && !job.isRunning && !_run.isRunning)
+          IconButton(
+            icon: Icon(Icons.replay, color: AppColors.muted),
+            tooltip: 'Re-run this job',
+            onPressed: () => _rerunJob(job),
+          ),
         IconButton(
           icon: Icon(Icons.unfold_more, color: AppColors.muted),
           tooltip: 'Expand all steps',

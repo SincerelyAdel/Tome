@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models/github_models.dart';
+import '../../services/github_org.dart';
 import '../../services/github_service.dart';
 import '../../theme.dart';
 import '../../widgets/diff_view.dart';
 import '../../widgets/gh_markdown.dart';
 import '../../widgets/gh_widgets.dart';
+import '../../widgets/issue_actions.dart';
 import 'commit_detail_screen.dart';
 
 /// An issue or pull request laid out like GitHub: header, (for PRs) the
@@ -136,12 +138,19 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           if (!_isPr || _tab == 0)
             wide
                 ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(child: _conversation()),
+                    Expanded(
+                        child: Column(children: [
+                      _conversation(),
+                      const SizedBox(height: 8),
+                      _actions(),
+                    ])),
                     const SizedBox(width: 28),
                     SizedBox(width: 280, child: _sidebar()),
                   ])
                 : Column(children: [
                     _conversation(),
+                    const SizedBox(height: 8),
+                    _actions(),
                     const SizedBox(height: 24),
                     _sidebar(),
                   ])
@@ -152,6 +161,36 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           else
             _filesTab(),
         ],
+      ),
+    );
+  }
+
+  /// Comment / close / review / merge, then reload with fresh data.
+  Widget _actions() => IssueActions(
+        owner: widget.owner,
+        repo: widget.repo,
+        github: widget.github,
+        issue: _i,
+        pull: _pull,
+        onChanged: _reloadPage,
+      );
+
+  Future<void> _reloadPage() async {
+    GhIssue fresh = _i;
+    try {
+      fresh = await widget.github
+          .getIssue(widget.owner, widget.repo, _i.number);
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => IssueDetailScreen(
+            owner: widget.owner,
+            repo: widget.repo,
+            github: widget.github,
+            issue: fresh),
       ),
     );
   }
