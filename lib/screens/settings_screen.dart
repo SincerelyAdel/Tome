@@ -11,9 +11,11 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _claudeCtrl = TextEditingController();
-  final _githubCtrl = TextEditingController();
+  final _github1Ctrl = TextEditingController();
+  final _github2Ctrl = TextEditingController();
   bool _claudeVisible = false;
-  bool _githubVisible = false;
+  bool _github1Visible = false;
+  bool _github2Visible = false;
   bool _saved = false;
 
   @override
@@ -24,16 +26,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final claude = await PrefsService.getClaudeKey();
-    final github = await PrefsService.getGithubToken();
+    final github1 = await PrefsService.getGithubToken();
+    final github2 = await PrefsService.getGithubToken2();
+    if (!mounted) return;
     setState(() {
       _claudeCtrl.text = claude ?? '';
-      _githubCtrl.text = github ?? '';
+      _github1Ctrl.text = github1 ?? '';
+      _github2Ctrl.text = github2 ?? '';
     });
   }
 
   Future<void> _save() async {
     await PrefsService.setClaudeKey(_claudeCtrl.text.trim());
-    await PrefsService.setGithubToken(_githubCtrl.text.trim());
+    await PrefsService.setGithubToken(_github1Ctrl.text.trim());
+    await PrefsService.setGithubToken2(_github2Ctrl.text.trim());
     setState(() => _saved = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _saved = false);
@@ -45,9 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Settings',
-            style: TextStyle(color: AppColors.text)),
-        iconTheme: const IconThemeData(color: AppColors.text),
+        title: Text('Settings', style: TextStyle(color: AppColors.text)),
+        iconTheme: IconThemeData(color: AppColors.text),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -64,21 +69,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() => _claudeVisible = !_claudeVisible),
             ),
             const SizedBox(height: 8),
-            _hint(
-                'Required for AI-powered report generation and file explanations.'),
+            _hint('Needed for the Explain button in the file viewer.'),
             const SizedBox(height: 28),
-            _sectionTitle('GitHub Personal Access Token'),
+            _sectionTitle('GitHub Account 1'),
             const SizedBox(height: 8),
             _buildKeyField(
-              controller: _githubCtrl,
+              controller: _github1Ctrl,
               hint: 'github_pat_... (optional for public repos)',
-              visible: _githubVisible,
+              visible: _github1Visible,
               onToggle: () =>
-                  setState(() => _githubVisible = !_githubVisible),
+                  setState(() => _github1Visible = !_github1Visible),
             ),
             const SizedBox(height: 8),
-            _hint(
-                'Optional. Required for private repos or to avoid rate limits. Use a fine-grained token with Contents: Read-only.'),
+            _hint('Personal access token. Needed for private repos, '
+                'Actions artifacts and higher rate limits.'),
+            const SizedBox(height: 28),
+            _sectionTitle('GitHub Account 2'),
+            const SizedBox(height: 8),
+            _buildKeyField(
+              controller: _github2Ctrl,
+              hint: 'github_pat_...',
+              visible: _github2Visible,
+              onToggle: () =>
+                  setState(() => _github2Visible = !_github2Visible),
+            ),
+            const SizedBox(height: 8),
+            _hint('Token for your second account. On the home screen, '
+                'swipe left or right to switch between accounts.'),
             const SizedBox(height: 36),
             SizedBox(
               width: double.infinity,
@@ -92,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Text(
                   _saved ? '✓ Saved' : 'Save',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.onAccent,
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
@@ -112,11 +129,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: snap.data!
                       .map((r) => ListTile(
                             title: Text(r,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppColors.accent,
                                     fontFamily: 'monospace')),
-                            trailing: const Icon(Icons.open_in_new,
-                                color: AppColors.muted, size: 18),
                           ))
                       .toList(),
                 );
@@ -128,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await PrefsService.clearRecentRepos();
                 setState(() {});
               },
-              child: const Text('Clear recent repos',
+              child: Text('Clear recent repos',
                   style: TextStyle(color: AppColors.danger)),
             ),
           ],
@@ -138,13 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _sectionTitle(String text) => Text(text,
-      style: const TextStyle(
-          color: AppColors.text,
-          fontSize: 16,
-          fontWeight: FontWeight.bold));
+      style: TextStyle(
+          color: AppColors.text, fontSize: 16, fontWeight: FontWeight.bold));
 
-  Widget _hint(String text) => Text(text,
-      style: const TextStyle(color: AppColors.muted, fontSize: 13));
+  Widget _hint(String text) =>
+      Text(text, style: TextStyle(color: AppColors.muted, fontSize: 13));
 
   Widget _buildKeyField({
     required TextEditingController controller,
@@ -152,28 +165,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool visible,
     required VoidCallback onToggle,
   }) {
+    OutlineInputBorder border(Color color) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: color),
+        );
     return TextField(
       controller: controller,
       obscureText: !visible,
-      style: const TextStyle(
+      autocorrect: false,
+      style: TextStyle(
           color: AppColors.text, fontFamily: 'monospace', fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.faint),
+        hintStyle: TextStyle(color: AppColors.faint),
         filled: true,
         fillColor: AppColors.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.accent),
-        ),
+        border: border(AppColors.border),
+        enabledBorder: border(AppColors.border),
+        focusedBorder: border(AppColors.accent),
         suffixIcon: IconButton(
           icon: Icon(visible ? Icons.visibility_off : Icons.visibility,
               color: AppColors.muted),
@@ -186,7 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _claudeCtrl.dispose();
-    _githubCtrl.dispose();
+    _github1Ctrl.dispose();
+    _github2Ctrl.dispose();
     super.dispose();
   }
 }

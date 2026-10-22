@@ -13,10 +13,10 @@ class GoldGlowBorder extends StatelessWidget {
     return Stack(
       children: [
         child,
-        const Positioned.fill(
+        Positioned.fill(
           child: IgnorePointer(
             child: RepaintBoundary(
-              child: CustomPaint(painter: _GlowPainter()),
+              child: CustomPaint(painter: _GlowPainter(AppColors.isDark)),
             ),
           ),
         ),
@@ -26,7 +26,9 @@ class GoldGlowBorder extends StatelessWidget {
 }
 
 class _GlowPainter extends CustomPainter {
-  const _GlowPainter();
+  const _GlowPainter(this.isDark);
+
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -63,5 +65,5 @@ class _GlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _GlowPainter old) => old.isDark != isDark;
 }

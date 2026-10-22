@@ -6,7 +6,6 @@ import '../services/prefs_service.dart';
 import '../widgets/file_icon.dart';
 import 'actions_screen.dart';
 import 'file_viewer_screen.dart';
-import 'report_screen.dart';
 import '../theme.dart';
 
 class RepoBrowserScreen extends StatefulWidget {
@@ -150,19 +149,6 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     );
   }
 
-  void _openReport() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ReportScreen(
-          owner: widget.owner,
-          repo: widget.repo,
-          github: _github,
-        ),
-      ),
-    );
-  }
-
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), duration: const Duration(seconds: 4)));
@@ -176,33 +162,33 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         title: Row(children: [
-          const Icon(Icons.code, color: AppColors.accent, size: 20),
+          Icon(Icons.code, color: AppColors.accent, size: 20),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               isWide ? '${widget.owner} / ${widget.repo}' : widget.repo,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.text,
                   fontFamily: 'monospace',
                   fontSize: 15),
             ),
           ),
         ]),
-        iconTheme: const IconThemeData(color: AppColors.text),
+        iconTheme: IconThemeData(color: AppColors.text),
         actions: [
           // GitHub Actions runs and artifacts
           if (isWide)
             TextButton.icon(
-              icon: const Icon(Icons.play_circle_outline,
+              icon: Icon(Icons.play_circle_outline,
                   color: AppColors.warning, size: 18),
-              label: const Text('Actions',
+              label: Text('Actions',
                   style: TextStyle(color: AppColors.warning)),
               onPressed: _openActions,
             )
           else
             IconButton(
-              icon: const Icon(Icons.play_circle_outline,
+              icon: Icon(Icons.play_circle_outline,
                   color: AppColors.warning),
               tooltip: 'Actions',
               onPressed: _openActions,
@@ -219,12 +205,12 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                     LinearProgressIndicator(
                       value: _downloadProgress,
                       backgroundColor: AppColors.border,
-                      valueColor: const AlwaysStoppedAnimation(
+                      valueColor: AlwaysStoppedAnimation(
                           AppColors.accent),
                     ),
                     Text(
                       '${(_downloadProgress * 100).toInt()}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.muted, fontSize: 11),
                     ),
                   ],
@@ -233,32 +219,17 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             )
           else if (isWide)
             TextButton.icon(
-              icon: const Icon(Icons.download,
+              icon: Icon(Icons.download,
                   color: AppColors.success, size: 18),
-              label: const Text('Download ZIP',
+              label: Text('Download ZIP',
                   style: TextStyle(color: AppColors.success)),
               onPressed: _downloadZip,
             )
           else
             IconButton(
-              icon: const Icon(Icons.download, color: AppColors.success),
+              icon: Icon(Icons.download, color: AppColors.success),
               tooltip: 'Download ZIP',
               onPressed: _downloadZip,
-            ),
-          // Generate report button
-          if (isWide)
-            TextButton.icon(
-              icon: const Icon(Icons.auto_awesome,
-                  color: AppColors.accent, size: 18),
-              label: const Text('Report',
-                  style: TextStyle(color: AppColors.accent)),
-              onPressed: _openReport,
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.auto_awesome, color: AppColors.accent),
-              tooltip: 'Report',
-              onPressed: _openReport,
             ),
           const SizedBox(width: 8),
         ],
@@ -270,7 +241,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             child: isWide
                 ? Row(children: [
                     SizedBox(width: 320, child: _buildFileTree()),
-                    const VerticalDivider(
+                    VerticalDivider(
                         width: 1, color: AppColors.border),
                     Expanded(child: _buildFilePane()),
                   ])
@@ -309,7 +280,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             ),
           ),
           ..._pathStack.asMap().entries.map((e) => Row(children: [
-                const Text(' / ',
+                Text(' / ',
                     style: TextStyle(
                         color: AppColors.faint, fontSize: 13)),
                 InkWell(
@@ -344,10 +315,10 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: AppColors.danger, size: 40),
+              Icon(Icons.error_outline, color: AppColors.danger, size: 40),
               const SizedBox(height: 8),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger),
+                  style: TextStyle(color: AppColors.danger),
                   textAlign: TextAlign.center),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -366,9 +337,9 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
       itemBuilder: (context, i) {
         if (_pathStack.isNotEmpty && i == 0) {
           return ListTile(
-            leading: const Icon(Icons.arrow_upward,
+            leading: Icon(Icons.arrow_upward,
                 color: AppColors.muted, size: 20),
-            title: const Text('..',
+            title: Text('..',
                 style: TextStyle(
                     color: AppColors.muted,
                     fontFamily: 'monospace')),
@@ -401,11 +372,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
             trailing: item.isFile && item.size != null
                 ? Text(
                     _formatSize(item.size!),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.faint, fontSize: 11),
                   )
                 : item.isDirectory
-                    ? const Icon(Icons.chevron_right,
+                    ? Icon(Icons.chevron_right,
                         color: AppColors.faint, size: 16)
                     : null,
             dense: true,
@@ -422,7 +393,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.touch_app,
+            Icon(Icons.touch_app,
                 color: AppColors.border, size: 56),
             const SizedBox(height: 12),
             Text(

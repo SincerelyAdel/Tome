@@ -60,38 +60,28 @@ class GitHubService {
     throw Exception('Failed to load file: ${response.statusCode}');
   }
 
-  Future<List<RepoItem>> getAllVerilogFiles(
-      String owner, String repo) async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/repos/$owner/$repo/git/trees/HEAD?recursive=1'),
-      headers: _headers,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final tree = data['tree'] as List<dynamic>;
-      return tree
-          .where((e) =>
-              e['type'] == 'blob' &&
-              (e['path'].toString().endsWith('.v') ||
-                  e['path'].toString().endsWith('.sv') ||
-                  e['path'].toString().endsWith('.vh')))
-          .map((e) => RepoItem(
-                name: e['path'].toString().split('/').last,
-                path: e['path'],
-                type: 'file',
-                size: e['size'],
-                sha: e['sha'],
-              ))
-          .toList();
-    }
-    throw Exception('Failed to fetch tree: ${response.statusCode}');
-  }
-
   /// Repos the token's owner can access (own, collaborator, org),
   /// most recently pushed first. Includes private repos.
   Future<List<RepoInfo>> getMyRepos() async {
     return _getRepoList('$_baseUrl/user/repos?per_page=100&sort=pushed'
         '&affiliation=owner,collaborator,organization_member');
+  }
+
+  /// The token owner's login and avatar URL.
+  Future<({String login, String avatarUrl})> getViewer() async {
+    final response =
+        await http.get(Uri.parse('$_baseUrl/user'), headers: _headers);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (
+        login: data['login'] as String,
+        avatarUrl: (data['avatar_url'] as String?) ?? '',
+      );
+    }
+    if (response.statusCode == 401) {
+      throw Exception('GitHub token was rejected. Check it in Settings.');
+    }
+    throw Exception('Could not load account: ${response.statusCode}');
   }
 
   /// Public repos of any user or organization.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/github.dart';
 import '../models/repo_item.dart';
 import '../services/github_service.dart';
 import '../services/claude_service.dart';
@@ -102,7 +103,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           Flexible(
             child: Text(
               widget.item.name,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.text,
                   fontFamily: 'monospace',
                   fontSize: 15),
@@ -110,25 +111,25 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             ),
           ),
         ]),
-        iconTheme: const IconThemeData(color: AppColors.text),
+        iconTheme: IconThemeData(color: AppColors.text),
         actions: [
           if (_content != null)
             IconButton(
-              icon: const Icon(Icons.copy, color: AppColors.muted),
+              icon: Icon(Icons.copy, color: AppColors.muted),
               tooltip: 'Copy',
               onPressed: _copy,
             ),
           if (_content != null && lang == 'verilog')
             TextButton.icon(
               icon: _explaining
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: AppColors.accent))
-                  : const Icon(Icons.auto_awesome,
+                  : Icon(Icons.auto_awesome,
                       color: AppColors.accent, size: 18),
-              label: const Text('Explain',
+              label: Text('Explain',
                   style: TextStyle(color: AppColors.accent)),
               onPressed: _explaining ? null : _explain,
             ),
@@ -139,7 +140,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           : _error != null
               ? Center(
                   child: Text(_error!,
-                      style: const TextStyle(color: AppColors.danger)))
+                      style: TextStyle(color: AppColors.danger)))
               : Column(
                   children: [
                     if (_explanation != null) _buildExplanation(),
@@ -163,16 +164,16 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
+            Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
             const SizedBox(width: 6),
-            const Text('Claude Explanation',
+            Text('Claude Explanation',
                 style: TextStyle(
                     color: AppColors.accent,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
             const Spacer(),
             IconButton(
-              icon: const Icon(Icons.close,
+              icon: Icon(Icons.close,
                   color: AppColors.muted, size: 16),
               onPressed: () => setState(() => _explanation = null),
               padding: EdgeInsets.zero,
@@ -181,7 +182,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           ]),
           const SizedBox(height: 8),
           Text(_explanation!,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.text, fontSize: 13, height: 1.5)),
         ],
       ),
@@ -199,8 +200,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             _content ?? '',
             language: lang,
             theme: {
-              ...atomOneDarkTheme,
-              'root': atomOneDarkTheme['root']!.copyWith(
+              ..._codeTheme,
+              'root': _codeTheme['root']!.copyWith(
                   backgroundColor: AppColors.surface, color: AppColors.text),
             },
             padding: const EdgeInsets.all(16),
@@ -212,3 +213,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     );
   }
 }
+
+/// Syntax colors that match the current light or dark theme.
+Map<String, TextStyle> get _codeTheme =>
+    AppColors.isDark ? atomOneDarkTheme : githubTheme;

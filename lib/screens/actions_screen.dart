@@ -7,15 +7,15 @@ import '../services/artifact_service.dart';
 import '../services/github_service.dart';
 import '../theme.dart';
 
-const _bg = AppColors.bg;
-const _surface = AppColors.surface;
-const _border = AppColors.border;
-const _text = AppColors.text;
-const _muted = AppColors.muted;
-const _blue = AppColors.accent;
-const _green = AppColors.success;
-const _red = AppColors.danger;
-const _yellow = AppColors.warning;
+Color get _bg => AppColors.bg;
+Color get _surface => AppColors.surface;
+Color get _border => AppColors.border;
+Color get _text => AppColors.text;
+Color get _muted => AppColors.muted;
+Color get _blue => AppColors.accent;
+Color get _green => AppColors.success;
+Color get _red => AppColors.danger;
+Color get _yellow => AppColors.warning;
 
 /// Lists recent GitHub Actions runs for a repo.
 class ActionsScreen extends StatefulWidget {
@@ -81,8 +81,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: _text),
-        title: const Text('Actions', style: TextStyle(color: _text)),
+        iconTheme: IconThemeData(color: _text),
+        title: Text('Actions', style: TextStyle(color: _text)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -106,7 +106,7 @@ class _ActionsScreenState extends State<ActionsScreen> {
       return _ErrorView(message: _error!, onRetry: _load);
     }
     if (_runs.isEmpty) {
-      return const Center(
+      return Center(
         child: Text('No workflow runs yet', style: TextStyle(color: _muted)),
       );
     }
@@ -115,7 +115,7 @@ class _ActionsScreenState extends State<ActionsScreen> {
       child: ListView.separated(
         itemCount: _runs.length,
         separatorBuilder: (_, __) =>
-            const Divider(height: 1, color: _border),
+            Divider(height: 1, color: _border),
         itemBuilder: (context, i) {
           final run = _runs[i];
           return ListTile(
@@ -124,16 +124,16 @@ class _ActionsScreenState extends State<ActionsScreen> {
               run.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _text, fontSize: 14),
+              style: TextStyle(color: _text, fontSize: 14),
             ),
             subtitle: Text(
               '${run.name} #${run.runNumber} · ${run.branch} · '
               '${_ago(run.createdAt)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _muted, fontSize: 12),
+              style: TextStyle(color: _muted, fontSize: 12),
             ),
-            trailing: const Icon(Icons.chevron_right, color: _muted),
+            trailing: Icon(Icons.chevron_right, color: _muted),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -251,9 +251,9 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: _text),
+        iconTheme: IconThemeData(color: _text),
         title: Text('${run.name} #${run.runNumber}',
-            style: const TextStyle(color: _text, fontSize: 16)),
+            style: TextStyle(color: _text, fontSize: 16)),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -262,7 +262,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           children: [
             _summaryCard(run),
             const SizedBox(height: 20),
-            const Text('Artifacts',
+            Text('Artifacts',
                 style: TextStyle(
                     color: _text, fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -296,7 +296,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           widget.run.isRunning
               ? 'Still running. Artifacts appear when the run finishes.'
               : 'This run has no artifacts.',
-          style: const TextStyle(color: _muted),
+          style: TextStyle(color: _muted),
         )
       ];
     }
@@ -321,12 +321,12 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(run.title,
-                    style: const TextStyle(color: _text, fontSize: 15)),
+                    style: TextStyle(color: _text, fontSize: 15)),
                 const SizedBox(height: 6),
                 Text(
                   '${_statusLabel(run)} · ${run.branch} · ${run.shortSha}\n'
                   '${run.event} · ${_ago(run.createdAt)}',
-                  style: const TextStyle(color: _muted, fontSize: 12),
+                  style: TextStyle(color: _muted, fontSize: 12),
                 ),
               ],
             ),
@@ -350,12 +350,12 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ListTile(
-            leading: const Icon(Icons.inventory_2_outlined, color: _muted),
+            leading: Icon(Icons.inventory_2_outlined, color: _muted),
             title: Text(a.name,
-                style: const TextStyle(color: _text, fontFamily: 'monospace')),
+                style: TextStyle(color: _text, fontFamily: 'monospace')),
             subtitle: Text(
               a.expired ? 'Expired' : _size(a.sizeInBytes),
-              style: const TextStyle(color: _muted, fontSize: 12),
+              style: TextStyle(color: _muted, fontSize: 12),
             ),
             trailing: a.expired
                 ? null
@@ -381,10 +381,10 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
           if (s?.error != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(s!.error!, style: const TextStyle(color: _red)),
+              child: Text(s!.error!, style: TextStyle(color: _red)),
             ),
           if (s?.files != null) ...[
-            const Divider(height: 1, color: _border),
+            Divider(height: 1, color: _border),
             ...s!.files!.map(_fileRow),
           ],
         ],
@@ -401,7 +401,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
       leading: Icon(apk ? Icons.android : Icons.insert_drive_file,
           color: apk ? _green : _muted),
       title: Text(name,
-          style: const TextStyle(
+          style: TextStyle(
               color: _text, fontFamily: 'monospace', fontSize: 12)),
       subtitle: Text(
         [
@@ -428,7 +428,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
         border: Border.all(color: _yellow.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(text, style: const TextStyle(color: _text, fontSize: 13)),
+      child: Text(text, style: TextStyle(color: _text, fontSize: 13)),
     );
   }
 }
@@ -444,7 +444,7 @@ class RunStatusIcon extends StatelessWidget {
       return SizedBox(
         width: size,
         height: size,
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(3),
           child: CircularProgressIndicator(strokeWidth: 2.5, color: _yellow),
         ),
@@ -475,10 +475,10 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _red, size: 40),
+            Icon(Icons.error_outline, color: _red, size: 40),
             const SizedBox(height: 8),
             Text(message,
-                style: const TextStyle(color: _red),
+                style: TextStyle(color: _red),
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
             ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
