@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../models/github_models.dart';
 import '../../services/github_service.dart';
 import '../../theme.dart';
+import '../../widgets/commit_graph.dart';
 import '../../widgets/gh_widgets.dart';
 import 'commit_detail_screen.dart';
 
-/// Commit history of the selected branch, grouped by day like GitHub.
+/// Commit history of the selected branch, with a branch/merge graph.
 class CommitsTab extends StatefulWidget {
   const CommitsTab({
     super.key,
@@ -25,7 +26,11 @@ class CommitsTab extends StatefulWidget {
 }
 
 class _CommitsTabState extends State<CommitsTab> {
+  static const _rowHeight = 66.0;
+  static const _maxLanes = 10;
+
   List<GhCommit>? _commits;
+  List<GraphRow> _graph = [];
   String? _error;
 
   @override
@@ -49,7 +54,12 @@ class _CommitsTabState extends State<CommitsTab> {
     try {
       final c = await widget.github
           .getCommits(widget.owner, widget.repo, branch: branch);
-      if (mounted && branch == widget.branch) setState(() => _commits = c);
+      if (mounted && branch == widget.branch) {
+        setState(() {
+          _commits = c;
+          _graph = layoutGraph(c);
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -63,109 +73,108 @@ class _CommitsTabState extends State<CommitsTab> {
     if (commits == null) return tabMessage(error: _error, onRetry: _load);
     if (commits.isEmpty) return tabMessage(empty: 'No commits');
 
-    // Day headers between commits from different days.
-    final rows = <Widget>[];
-    String? day;
-    for (final c in commits) {
-      final d = c.date == null ? '' : _dayLabel(c.date!.toLocal());
-      if (d != day) {
-        day = d;
-        rows.add(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
-          child: Row(children: [
-            Icon(Icons.commit, size: 16, color: AppColors.muted),
-            const SizedBox(width: 8),
-            Text('Commits on $d',
-                style: TextStyle(color: AppColors.muted, fontSize: 13)),
-          ]),
-        ));
-      }
-      rows.add(_row(c));
-    }
+    final lanes = _graph
+        .map((r) => r.width)
+        .fold<int>(1, (a, b) => a > b ? a : b)
+        .clamp(1, _maxLanes);
+    final graphWidth = lanes * laneWidth + 16;
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
-        children: rows,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 32),
+        itemExtent: _rowHeight,
+        itemCount: commits.length,
+        itemBuilder: (_, i) => _row(commits[i], _graph[i], graphWidth),
       ),
     );
   }
 
-  Widget _row(GhCommit c) {
+  Widget _row(GhCommit c, GraphRow g, double graphWidth) {
     final who = c.author?.login ?? c.authorName;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          left: BorderSide(color: AppColors.border),
-          right: BorderSide(color: AppColors.border),
-          bottom: BorderSide(color: AppColors.border),
-          top: BorderSide(color: AppColors.border, width: 0.5),
+    final isMerge = c.parents.length > 1;
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CommitDetailScreen(
+            owner: widget.owner,
+            repo: widget.repo,
+            github: widget.github,
+            summary: c,
+          ),
         ),
       ),
-      child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CommitDetailScreen(
-              owner: widget.owner,
-              repo: widget.repo,
-              github: widget.github,
-              summary: c,
+      child: Row(children: [
+        SizedBox(
+          width: graphWidth,
+          height: _rowHeight,
+          child: ClipRect(
+            child: CustomPaint(
+              painter: GraphRowPainter(g,
+                  isMerge: isMerge, dark: AppColors.isDark),
             ),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Row(children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(c.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Avatar(c.author?.avatarUrl ?? '', size: 18),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text('$who committed ${timeAgo(c.date)}',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: AppColors.muted, fontSize: 12.5)),
-                    ),
-                  ]),
-                ],
-              ),
+        Expanded(
+          child: Container(
+            height: _rowHeight,
+            padding: const EdgeInsets.only(left: 4, right: 8),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceAlt,
-                borderRadius: BorderRadius.circular(6),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(c.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: isMerge ? AppColors.muted : AppColors.text,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 5),
+                    Row(children: [
+                      Avatar(c.author?.avatarUrl ?? '', size: 18),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                            '$who committed ${timeAgo(c.date)}'
+                            '${c.date == null ? '' : '  ·  ${_date(c.date!.toLocal())}'}',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: AppColors.muted, fontSize: 12.5)),
+                      ),
+                    ]),
+                  ],
+                ),
               ),
-              child: Text(c.shortSha,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      color: AppColors.muted,
-                      fontSize: 12.5)),
-            ),
-          ]),
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(c.shortSha,
+                    style: TextStyle(
+                        fontFamily: 'monospace',
+                        color: AppColors.muted,
+                        fontSize: 12.5)),
+              ),
+            ]),
+          ),
         ),
-      ),
+      ]),
     );
   }
 }
 
-String _dayLabel(DateTime d) {
+String _date(DateTime d) {
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'

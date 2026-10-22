@@ -38,6 +38,8 @@ class GhIssue {
   final DateTime? closedAt;
   final String? headRef;
   final String? baseRef;
+  final List<GhUser> assignees;
+  final String? milestone;
 
   const GhIssue({
     required this.number,
@@ -54,6 +56,8 @@ class GhIssue {
     this.closedAt,
     this.headRef,
     this.baseRef,
+    this.assignees = const [],
+    this.milestone,
   });
 
   /// From /issues (may also contain PRs) or /pulls.
@@ -77,6 +81,10 @@ class GhIssue {
       closedAt: DateTime.tryParse(json['closed_at'] ?? ''),
       headRef: json['head']?['ref'],
       baseRef: json['base']?['ref'],
+      assignees: ((json['assignees'] as List?) ?? [])
+          .map((e) => GhUser.fromJson(e))
+          .toList(),
+      milestone: json['milestone']?['title'],
     );
   }
 }
@@ -104,6 +112,7 @@ class GhCommit {
   final List<GhFileChange> files;
   final int additions;
   final int deletions;
+  final List<String> parents;
 
   const GhCommit({
     required this.sha,
@@ -114,6 +123,7 @@ class GhCommit {
     this.files = const [],
     this.additions = 0,
     this.deletions = 0,
+    this.parents = const [],
   });
 
   String get shortSha => sha.length > 7 ? sha.substring(0, 7) : sha;
@@ -134,6 +144,9 @@ class GhCommit {
           .toList(),
       additions: json['stats']?['additions'] ?? 0,
       deletions: json['stats']?['deletions'] ?? 0,
+      parents: ((json['parents'] as List?) ?? [])
+          .map((p) => p['sha'] as String)
+          .toList(),
     );
   }
 }
@@ -171,5 +184,134 @@ class GhBranch {
   factory GhBranch.fromJson(Map<String, dynamic> json) => GhBranch(
         name: json['name'] ?? '',
         isProtected: json['protected'] == true,
+      );
+}
+
+/// Extra fields of a pull request that only /pulls/{n} returns.
+class GhPullDetail {
+  final int commits;
+  final int additions;
+  final int deletions;
+  final int changedFiles;
+  final String headSha;
+  final String headRef;
+  final String baseRef;
+  final bool merged;
+  final String mergeableState; // clean, dirty, blocked, unstable, unknown
+  final List<GhUser> requestedReviewers;
+
+  const GhPullDetail({
+    required this.commits,
+    required this.additions,
+    required this.deletions,
+    required this.changedFiles,
+    required this.headSha,
+    required this.headRef,
+    required this.baseRef,
+    required this.merged,
+    required this.mergeableState,
+    required this.requestedReviewers,
+  });
+
+  factory GhPullDetail.fromJson(Map<String, dynamic> json) => GhPullDetail(
+        commits: json['commits'] ?? 0,
+        additions: json['additions'] ?? 0,
+        deletions: json['deletions'] ?? 0,
+        changedFiles: json['changed_files'] ?? 0,
+        headSha: json['head']?['sha'] ?? '',
+        headRef: json['head']?['ref'] ?? '',
+        baseRef: json['base']?['ref'] ?? '',
+        merged: json['merged'] == true,
+        mergeableState: json['mergeable_state'] ?? 'unknown',
+        requestedReviewers: ((json['requested_reviewers'] as List?) ?? [])
+            .map((e) => GhUser.fromJson(e))
+            .toList(),
+      );
+}
+
+/// One entry of an issue/PR timeline (comment, review, commit, event).
+class GhEvent {
+  final String event; // commented, reviewed, committed, assigned, ...
+  final GhUser? actor;
+  final DateTime? at;
+  final String body;
+
+  /// Review state: approved, changes_requested, commented, dismissed.
+  final String? reviewState;
+
+  /// For committed events.
+  final String? sha;
+  final String? message;
+  final String? authorName;
+
+  /// Who was assigned / requested / mentioned, or the label.
+  final GhUser? subject;
+  final GhLabel? label;
+  final String? renameFrom;
+  final String? renameTo;
+
+  const GhEvent({
+    required this.event,
+    this.actor,
+    this.at,
+    this.body = '',
+    this.reviewState,
+    this.sha,
+    this.message,
+    this.authorName,
+    this.subject,
+    this.label,
+    this.renameFrom,
+    this.renameTo,
+  });
+
+  factory GhEvent.fromJson(Map<String, dynamic> json) {
+    final event = json['event'] ?? '';
+    final who = json['actor'] ?? json['user'];
+    final subject = json['assignee'] ?? json['requested_reviewer'];
+    DateTime? at = DateTime.tryParse(
+        json['created_at'] ?? json['submitted_at'] ?? '');
+    if (event == 'committed') {
+      at = DateTime.tryParse(json['author']?['date'] ?? '');
+    }
+    return GhEvent(
+      event: event,
+      actor: who == null ? null : GhUser.fromJson(who),
+      at: at,
+      body: json['body'] ?? '',
+      reviewState: (json['state'] as String?)?.toLowerCase(),
+      sha: json['sha'] ?? json['commit_id'],
+      message: json['message'],
+      authorName: json['author']?['name'],
+      subject: subject == null ? null : GhUser.fromJson(subject),
+      label: json['label'] == null ? null : GhLabel.fromJson(json['label']),
+      renameFrom: json['rename']?['from'],
+      renameTo: json['rename']?['to'],
+    );
+  }
+}
+
+/// A CI check run on a commit.
+class GhCheckRun {
+  final String name;
+  final String status; // queued, in_progress, completed
+  final String? conclusion; // success, failure, cancelled, skipped, ...
+  final DateTime? startedAt;
+  final DateTime? completedAt;
+
+  const GhCheckRun({
+    required this.name,
+    required this.status,
+    this.conclusion,
+    this.startedAt,
+    this.completedAt,
+  });
+
+  factory GhCheckRun.fromJson(Map<String, dynamic> json) => GhCheckRun(
+        name: json['name'] ?? '',
+        status: json['status'] ?? '',
+        conclusion: json['conclusion'],
+        startedAt: DateTime.tryParse(json['started_at'] ?? ''),
+        completedAt: DateTime.tryParse(json['completed_at'] ?? ''),
       );
 }

@@ -9,6 +9,7 @@ import '../services/github_service.dart';
 import '../services/claude_service.dart';
 import '../services/prefs_service.dart';
 import '../widgets/file_icon.dart';
+import '../widgets/gh_markdown.dart';
 import '../theme.dart';
 
 class FileViewerScreen extends StatefulWidget {
@@ -40,6 +41,9 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   String? _explanation;
   bool _explaining = false;
 
+  /// Markdown files open rendered; the toggle shows the raw text.
+  bool _preview = true;
+
   @override
   void initState() {
     super.initState();
@@ -48,9 +52,9 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
 
   Future<void> _loadFile() async {
     try {
-      final content = await widget.github
-          .getFileContent(widget.owner, widget.repo, widget.item.path,
-              ref: widget.branch);
+      final content = await widget.github.getFileContent(
+          widget.owner, widget.repo, widget.item.path,
+          ref: widget.branch);
       setState(() {
         _content = content;
         _loading = false;
@@ -92,8 +96,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -110,15 +113,20 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             child: Text(
               widget.item.name,
               style: TextStyle(
-                  color: AppColors.text,
-                  fontFamily: 'monospace',
-                  fontSize: 15),
+                  color: AppColors.text, fontFamily: 'monospace', fontSize: 15),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ]),
         iconTheme: IconThemeData(color: AppColors.text),
         actions: [
+          if (_content != null && lang == 'markdown')
+            IconButton(
+              icon: Icon(_preview ? Icons.code : Icons.visibility_outlined,
+                  color: AppColors.muted),
+              tooltip: _preview ? 'Show source' : 'Show preview',
+              onPressed: () => setState(() => _preview = !_preview),
+            ),
           if (_content != null)
             IconButton(
               icon: Icon(Icons.copy, color: AppColors.muted),
@@ -133,10 +141,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                       height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: AppColors.accent))
-                  : Icon(Icons.auto_awesome,
-                      color: AppColors.accent, size: 18),
-              label: Text('Explain',
-                  style: TextStyle(color: AppColors.accent)),
+                  : Icon(Icons.auto_awesome, color: AppColors.accent, size: 18),
+              label: Text('Explain', style: TextStyle(color: AppColors.accent)),
               onPressed: _explaining ? null : _explain,
             ),
         ],
@@ -145,8 +151,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
-                  child: Text(_error!,
-                      style: TextStyle(color: AppColors.danger)))
+                  child:
+                      Text(_error!, style: TextStyle(color: AppColors.danger)))
               : Column(
                   children: [
                     if (_explanation != null) _buildExplanation(),
@@ -179,8 +185,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                     fontSize: 13)),
             const Spacer(),
             IconButton(
-              icon: Icon(Icons.close,
-                  color: AppColors.muted, size: 16),
+              icon: Icon(Icons.close, color: AppColors.muted, size: 16),
               onPressed: () => setState(() => _explanation = null),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -188,8 +193,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           ]),
           const SizedBox(height: 8),
           Text(_explanation!,
-              style: TextStyle(
-                  color: AppColors.text, fontSize: 13, height: 1.5)),
+              style:
+                  TextStyle(color: AppColors.text, fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -209,11 +214,20 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           ClipRRect(
             borderRadius: radius,
             child: Stack(children: [
-              _glow(left: -120, top: -100, size: 460,
+              _glow(
+                  left: -120,
+                  top: -100,
+                  size: 460,
                   color: AppColors.accent.withOpacity(dark ? 0.30 : 0.22)),
-              _glow(right: -140, bottom: -120, size: 560,
+              _glow(
+                  right: -140,
+                  bottom: -120,
+                  size: 560,
                   color: AppColors.accentLight.withOpacity(dark ? 0.22 : 0.30)),
-              _glow(right: 180, top: 120, size: 300,
+              _glow(
+                  right: 180,
+                  top: 120,
+                  size: 300,
                   color: AppColors.accent.withOpacity(dark ? 0.12 : 0.10)),
             ]),
           ),
@@ -243,39 +257,57 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                         : Colors.white.withOpacity(0.85),
                   ),
                 ),
-                child: LayoutBuilder(
-                  builder: (context, box) => Scrollbar(
-                    child: SingleChildScrollView(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          // At least the pane's size: no empty strips.
-                          constraints: BoxConstraints(
-                              minWidth: box.maxWidth, minHeight: box.maxHeight),
-                          child: HighlightView(
-                            _content ?? '',
-                            language: lang,
-                            theme: {
-                              ..._codeTheme,
-                              'root': _codeTheme['root']!.copyWith(
-                                  backgroundColor: Colors.transparent,
-                                  color: AppColors.text),
-                            },
-                            padding: const EdgeInsets.all(20),
-                            textStyle: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                                height: 1.5),
+                child: lang == 'markdown' && _preview
+                    ? _buildPreview()
+                    : LayoutBuilder(
+                        builder: (context, box) => Scrollbar(
+                          child: SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                // At least the pane's size: no empty strips.
+                                constraints: BoxConstraints(
+                                    minWidth: box.maxWidth,
+                                    minHeight: box.maxHeight),
+                                child: HighlightView(
+                                  _content ?? '',
+                                  language: lang,
+                                  theme: {
+                                    ..._codeTheme,
+                                    'root': _codeTheme['root']!.copyWith(
+                                        backgroundColor: Colors.transparent,
+                                        color: AppColors.text),
+                                  },
+                                  padding: const EdgeInsets.all(20),
+                                  textStyle: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 14,
+                                      height: 1.5),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Rendered markdown; relative images load from the repo's raw files.
+  Widget _buildPreview() {
+    final path = widget.item.path;
+    final dir =
+        path.contains('/') ? path.substring(0, path.lastIndexOf('/') + 1) : '';
+    final base = 'https://raw.githubusercontent.com/${widget.owner}/'
+        '${widget.repo}/${widget.branch ?? 'HEAD'}/$dir';
+    return Scrollbar(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 40),
+        child: GhMarkdown(_content ?? '', imageBase: base, fontSize: 15),
       ),
     );
   }

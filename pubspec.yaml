@@ -18,6 +18,8 @@ dependencies:
   flutter_highlight: ^0.7.0
   archive: ^4.5.2
   open_filex: ^5.0.0
+  flutter_markdown: 0.7.7+1
+  markdown: 7.1.1
 
 dev_dependencies:
   flutter_test:

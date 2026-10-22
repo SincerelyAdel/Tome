@@ -116,6 +116,70 @@ class GitHubService {
     return list.map((e) => GhComment.fromJson(e)).toList();
   }
 
+  Future<GhPullDetail> getPull(String owner, String repo, int number) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/repos/$owner/$repo/pulls/$number'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return GhPullDetail.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load pull request: ${response.statusCode}');
+  }
+
+  /// Everything that happened on an issue or PR, oldest first: comments,
+  /// reviews, pushed commits, assignments, labels, merges...
+  Future<List<GhEvent>> getTimeline(
+      String owner, String repo, int number) async {
+    final events = <GhEvent>[];
+    for (var page = 1; page <= 5; page++) {
+      final list = await _getList(
+          '$_baseUrl/repos/$owner/$repo/issues/$number/timeline'
+          '?per_page=100&page=$page',
+          'timeline');
+      events.addAll(list.map((e) => GhEvent.fromJson(e)));
+      if (list.length < 100) break;
+    }
+    return events;
+  }
+
+  Future<List<GhCommit>> getPullCommits(
+      String owner, String repo, int number) async {
+    final list = await _getList(
+        '$_baseUrl/repos/$owner/$repo/pulls/$number/commits?per_page=100',
+        'commits');
+    return list.map((e) => GhCommit.fromJson(e)).toList();
+  }
+
+  Future<List<GhFileChange>> getPullFiles(
+      String owner, String repo, int number) async {
+    final files = <GhFileChange>[];
+    for (var page = 1; page <= 5; page++) {
+      final list = await _getList(
+          '$_baseUrl/repos/$owner/$repo/pulls/$number/files'
+          '?per_page=100&page=$page',
+          'files');
+      files.addAll(list.map((e) => GhFileChange.fromJson(e)));
+      if (list.length < 100) break;
+    }
+    return files;
+  }
+
+  Future<List<GhCheckRun>> getCheckRuns(
+      String owner, String repo, String sha) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/repos/$owner/$repo/commits/$sha/check-runs'
+          '?per_page=100'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return ((jsonDecode(response.body)['check_runs'] as List?) ?? [])
+          .map((e) => GhCheckRun.fromJson(e))
+          .toList();
+    }
+    throw Exception('Failed to load checks: ${response.statusCode}');
+  }
+
   Future<List<GhCommit>> getCommits(String owner, String repo,
       {String? branch}) async {
     final sha = branch == null ? '' : '&sha=${Uri.encodeQueryComponent(branch)}';

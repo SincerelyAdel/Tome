@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../models/github_models.dart';
 import '../../services/github_service.dart';
 import '../../theme.dart';
+import '../../widgets/diff_view.dart';
 import '../../widgets/gh_widgets.dart';
 
 /// One commit: message, author, and each changed file with its diff.
@@ -29,7 +30,6 @@ class CommitDetailScreen extends StatefulWidget {
 class _CommitDetailScreenState extends State<CommitDetailScreen> {
   GhCommit? _commit;
   String? _error;
-  final Set<String> _collapsed = {};
 
   @override
   void initState() {
@@ -49,8 +49,6 @@ class _CommitDetailScreenState extends State<CommitDetailScreen> {
       }
     }
   }
-
-  Green get _add => Green(AppColors.isDark);
 
   @override
   Widget build(BuildContext context) {
@@ -104,124 +102,20 @@ class _CommitDetailScreenState extends State<CommitDetailScreen> {
               child: tabMessage(error: _error, onRetry: _load),
             )
           else ...[
-            Text.rich(TextSpan(children: [
-              TextSpan(
-                  text: '${c.files.length} changed file'
-                      '${c.files.length == 1 ? '' : 's'}  '),
-              TextSpan(
-                  text: '+${c.additions} ', style: TextStyle(color: _add.text)),
-              TextSpan(
-                  text: '−${c.deletions}', style: TextStyle(color: ghClosed)),
-            ]), style: TextStyle(color: AppColors.text, fontSize: 14)),
+            Row(children: [
+              Text(
+                  '${c.files.length} changed file'
+                  '${c.files.length == 1 ? '' : 's'}  ',
+                  style: TextStyle(color: AppColors.text, fontSize: 14)),
+              diffStat(c.additions, c.deletions, fontSize: 14),
+              const SizedBox(width: 6),
+              diffBar(c.additions, c.deletions),
+            ]),
             const SizedBox(height: 12),
-            ...c.files.map(_fileCard),
+            ...c.files.map((f) => DiffFileCard(f)),
           ],
         ],
       ),
     );
   }
-
-  Widget _fileCard(GhFileChange f) {
-    final collapsed = _collapsed.contains(f.filename);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: () => setState(() => collapsed
-                ? _collapsed.remove(f.filename)
-                : _collapsed.add(f.filename)),
-            child: Container(
-              color: AppColors.surfaceAlt,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(children: [
-                Icon(collapsed ? Icons.chevron_right : Icons.expand_more,
-                    size: 18, color: AppColors.muted),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(f.filename,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: AppColors.text,
-                          fontFamily: 'monospace',
-                          fontSize: 13)),
-                ),
-                if (f.status == 'added') outlineBadge('new', color: _add.text),
-                if (f.status == 'removed')
-                  outlineBadge('deleted', color: ghClosed),
-                if (f.status == 'renamed') outlineBadge('renamed'),
-                const SizedBox(width: 8),
-                Text('+${f.additions}',
-                    style: TextStyle(color: _add.text, fontSize: 12.5)),
-                const SizedBox(width: 6),
-                Text('−${f.deletions}',
-                    style: TextStyle(color: ghClosed, fontSize: 12.5)),
-              ]),
-            ),
-          ),
-          if (!collapsed) _diff(f),
-        ],
-      ),
-    );
-  }
-
-  Widget _diff(GhFileChange f) {
-    final patch = f.patch;
-    if (patch == null || patch.isEmpty) {
-      return Container(
-        color: AppColors.surface,
-        padding: const EdgeInsets.all(14),
-        child: Text('Binary file or diff too large to show.',
-            style: TextStyle(color: AppColors.faint, fontSize: 13)),
-      );
-    }
-    final del = ghClosed;
-    final lines = patch.split('\n').map((line) {
-      Color? bg;
-      Color fg = AppColors.text;
-      if (line.startsWith('@@')) {
-        bg = AppColors.accent.withOpacity(0.10);
-        fg = AppColors.muted;
-      } else if (line.startsWith('+')) {
-        bg = _add.bg;
-      } else if (line.startsWith('-')) {
-        bg = del.withOpacity(AppColors.isDark ? 0.16 : 0.10);
-      }
-      return Container(
-        color: bg,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
-        child: Text(line.isEmpty ? ' ' : line,
-            softWrap: false,
-            style: TextStyle(
-                color: fg, fontFamily: 'monospace', fontSize: 12.5, height: 1.45)),
-      );
-    }).toList();
-
-    return Container(
-      color: AppColors.surface,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: IntrinsicWidth(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: lines,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Green used for additions in diffs.
-class Green {
-  Green(this.dark);
-  final bool dark;
-  Color get text => ghOpen;
-  Color get bg => ghOpen.withOpacity(dark ? 0.16 : 0.12);
 }
