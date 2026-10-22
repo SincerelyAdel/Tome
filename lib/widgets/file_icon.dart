@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 class FileIcon extends StatelessWidget {
   final String name;
@@ -19,7 +20,7 @@ class FileIcon extends StatelessWidget {
     if (isDirectory) {
       return Icon(
         isExpanded ? Icons.folder_open : Icons.folder,
-        color: const Color(0xFFE8A838),
+        color: AppColors.folder,
         size: size,
       );
     }
@@ -33,11 +34,11 @@ class FileIcon extends StatelessWidget {
       case 'sv':
       case 'vh':
         icon = Icons.memory;
-        color = const Color(0xFF58A6FF);
+        color = AppColors.accent;
         break;
       case 'dart':
         icon = Icons.code;
-        color = const Color(0xFF54C5F8);
+        color = const Color(0xFF1E8FC2);
         break;
       case 'py':
         icon = Icons.code;
@@ -51,7 +52,7 @@ class FileIcon extends StatelessWidget {
       case 'yaml':
       case 'yml':
         icon = Icons.data_object;
-        color = const Color(0xFFF0DB4F);
+        color = const Color(0xFFB59A12);
         break;
       case 'html':
         icon = Icons.web;
@@ -59,15 +60,15 @@ class FileIcon extends StatelessWidget {
         break;
       case 'vcd':
         icon = Icons.show_chart;
-        color = const Color(0xFF3FB950);
+        color = AppColors.success;
         break;
       case 'txt':
         icon = Icons.article;
-        color = Colors.grey;
+        color = AppColors.muted;
         break;
       default:
         icon = Icons.insert_drive_file;
-        color = Colors.grey;
+        color = AppColors.muted;
     }
 
     return Icon(icon, color: color, size: size);

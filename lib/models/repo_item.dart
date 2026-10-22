@@ -43,6 +43,9 @@ class RepoInfo {
   final String defaultBranch;
   final int stars;
   final String language;
+  final bool isPrivate;
+  final bool isFork;
+  final DateTime? updatedAt;
 
   RepoInfo({
     required this.owner,
@@ -52,6 +55,9 @@ class RepoInfo {
     required this.defaultBranch,
     required this.stars,
     required this.language,
+    this.isPrivate = false,
+    this.isFork = false,
+    this.updatedAt,
   });
 
   factory RepoInfo.fromJson(Map<String, dynamic> json) {
@@ -63,6 +69,9 @@ class RepoInfo {
       defaultBranch: json['default_branch'] ?? 'main',
       stars: json['stargazers_count'] ?? 0,
       language: json['language'] ?? '',
+      isPrivate: json['private'] ?? false,
+      isFork: json['fork'] ?? false,
+      updatedAt: DateTime.tryParse(json['pushed_at'] ?? json['updated_at'] ?? ''),
     );
   }
 

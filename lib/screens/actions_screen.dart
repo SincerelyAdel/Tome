@@ -5,16 +5,17 @@ import 'package:open_filex/open_filex.dart';
 import '../models/actions.dart';
 import '../services/artifact_service.dart';
 import '../services/github_service.dart';
+import '../theme.dart';
 
-const _bg = Color(0xFF0D1117);
-const _surface = Color(0xFF161B22);
-const _border = Color(0xFF30363D);
-const _text = Color(0xFFC9D1D9);
-const _muted = Color(0xFF8B949E);
-const _blue = Color(0xFF58A6FF);
-const _green = Color(0xFF3FB950);
-const _red = Color(0xFFF85149);
-const _yellow = Color(0xFFD29922);
+const _bg = AppColors.bg;
+const _surface = AppColors.surface;
+const _border = AppColors.border;
+const _text = AppColors.text;
+const _muted = AppColors.muted;
+const _blue = AppColors.accent;
+const _green = AppColors.success;
+const _red = AppColors.danger;
+const _yellow = AppColors.warning;
 
 /// Lists recent GitHub Actions runs for a repo.
 class ActionsScreen extends StatefulWidget {
@@ -80,7 +81,6 @@ class _ActionsScreenState extends State<ActionsScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: _surface,
         iconTheme: const IconThemeData(color: _text),
         title: const Text('Actions', style: TextStyle(color: _text)),
         actions: [
@@ -251,7 +251,6 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: _surface,
         iconTheme: const IconThemeData(color: _text),
         title: Text('${run.name} #${run.runNumber}',
             style: const TextStyle(color: _text, fontSize: 16)),
@@ -371,7 +370,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
                       )
                     : FilledButton.icon(
                         style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF238636)),
+                            backgroundColor: AppColors.accent),
                         onPressed: widget.github.hasToken
                             ? () => _download(a)
                             : null,
@@ -425,7 +424,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0x22D29922),
+        color: AppColors.warningBg,
         border: Border.all(color: _yellow.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(8),
       ),

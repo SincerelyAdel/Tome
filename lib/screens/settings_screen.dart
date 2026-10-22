@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/prefs_service.dart';
+import '../theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -42,12 +43,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
         title: const Text('Settings',
-            style: TextStyle(color: Color(0xFFC9D1D9))),
-        iconTheme: const IconThemeData(color: Color(0xFFC9D1D9)),
+            style: TextStyle(color: AppColors.text)),
+        iconTheme: const IconThemeData(color: AppColors.text),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -85,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF238636),
+                  backgroundColor: AppColors.accent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -93,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(
                   _saved ? '✓ Saved' : 'Save',
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.onAccent,
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
                 ),
@@ -113,10 +113,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       .map((r) => ListTile(
                             title: Text(r,
                                 style: const TextStyle(
-                                    color: Color(0xFF58A6FF),
+                                    color: AppColors.accent,
                                     fontFamily: 'monospace')),
                             trailing: const Icon(Icons.open_in_new,
-                                color: Color(0xFF8B949E), size: 18),
+                                color: AppColors.muted, size: 18),
                           ))
                       .toList(),
                 );
@@ -129,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {});
               },
               child: const Text('Clear recent repos',
-                  style: TextStyle(color: Color(0xFFDA3633))),
+                  style: TextStyle(color: AppColors.danger)),
             ),
           ],
         ),
@@ -139,12 +139,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _sectionTitle(String text) => Text(text,
       style: const TextStyle(
-          color: Color(0xFFC9D1D9),
+          color: AppColors.text,
           fontSize: 16,
           fontWeight: FontWeight.bold));
 
   Widget _hint(String text) => Text(text,
-      style: const TextStyle(color: Color(0xFF8B949E), fontSize: 13));
+      style: const TextStyle(color: AppColors.muted, fontSize: 13));
 
   Widget _buildKeyField({
     required TextEditingController controller,
@@ -156,27 +156,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       controller: controller,
       obscureText: !visible,
       style: const TextStyle(
-          color: Color(0xFFC9D1D9), fontFamily: 'monospace', fontSize: 13),
+          color: AppColors.text, fontFamily: 'monospace', fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF484F58)),
+        hintStyle: const TextStyle(color: AppColors.faint),
         filled: true,
-        fillColor: const Color(0xFF161B22),
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF58A6FF)),
+          borderSide: const BorderSide(color: AppColors.accent),
         ),
         suffixIcon: IconButton(
           icon: Icon(visible ? Icons.visibility_off : Icons.visibility,
-              color: const Color(0xFF8B949E)),
+              color: AppColors.muted),
           onPressed: onToggle,
         ),
       ),

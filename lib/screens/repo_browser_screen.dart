@@ -7,6 +7,7 @@ import '../widgets/file_icon.dart';
 import 'actions_screen.dart';
 import 'file_viewer_screen.dart';
 import 'report_screen.dart';
+import '../theme.dart';
 
 class RepoBrowserScreen extends StatefulWidget {
   final String owner;
@@ -172,38 +173,37 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     final isWide = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
         title: Row(children: [
-          const Icon(Icons.code, color: Color(0xFF58A6FF), size: 20),
+          const Icon(Icons.code, color: AppColors.accent, size: 20),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               isWide ? '${widget.owner} / ${widget.repo}' : widget.repo,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  color: Color(0xFFC9D1D9),
+                  color: AppColors.text,
                   fontFamily: 'monospace',
                   fontSize: 15),
             ),
           ),
         ]),
-        iconTheme: const IconThemeData(color: Color(0xFFC9D1D9)),
+        iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
           // GitHub Actions runs and artifacts
           if (isWide)
             TextButton.icon(
               icon: const Icon(Icons.play_circle_outline,
-                  color: Color(0xFFD29922), size: 18),
+                  color: AppColors.warning, size: 18),
               label: const Text('Actions',
-                  style: TextStyle(color: Color(0xFFD29922))),
+                  style: TextStyle(color: AppColors.warning)),
               onPressed: _openActions,
             )
           else
             IconButton(
               icon: const Icon(Icons.play_circle_outline,
-                  color: Color(0xFFD29922)),
+                  color: AppColors.warning),
               tooltip: 'Actions',
               onPressed: _openActions,
             ),
@@ -218,14 +218,14 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                   children: [
                     LinearProgressIndicator(
                       value: _downloadProgress,
-                      backgroundColor: const Color(0xFF30363D),
+                      backgroundColor: AppColors.border,
                       valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFF238636)),
+                          AppColors.accent),
                     ),
                     Text(
                       '${(_downloadProgress * 100).toInt()}%',
                       style: const TextStyle(
-                          color: Color(0xFF8B949E), fontSize: 11),
+                          color: AppColors.muted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -234,14 +234,14 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           else if (isWide)
             TextButton.icon(
               icon: const Icon(Icons.download,
-                  color: Color(0xFF3FB950), size: 18),
+                  color: AppColors.success, size: 18),
               label: const Text('Download ZIP',
-                  style: TextStyle(color: Color(0xFF3FB950))),
+                  style: TextStyle(color: AppColors.success)),
               onPressed: _downloadZip,
             )
           else
             IconButton(
-              icon: const Icon(Icons.download, color: Color(0xFF3FB950)),
+              icon: const Icon(Icons.download, color: AppColors.success),
               tooltip: 'Download ZIP',
               onPressed: _downloadZip,
             ),
@@ -249,14 +249,14 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           if (isWide)
             TextButton.icon(
               icon: const Icon(Icons.auto_awesome,
-                  color: Color(0xFF58A6FF), size: 18),
+                  color: AppColors.accent, size: 18),
               label: const Text('Report',
-                  style: TextStyle(color: Color(0xFF58A6FF))),
+                  style: TextStyle(color: AppColors.accent)),
               onPressed: _openReport,
             )
           else
             IconButton(
-              icon: const Icon(Icons.auto_awesome, color: Color(0xFF58A6FF)),
+              icon: const Icon(Icons.auto_awesome, color: AppColors.accent),
               tooltip: 'Report',
               onPressed: _openReport,
             ),
@@ -271,7 +271,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                 ? Row(children: [
                     SizedBox(width: 320, child: _buildFileTree()),
                     const VerticalDivider(
-                        width: 1, color: Color(0xFF30363D)),
+                        width: 1, color: AppColors.border),
                     Expanded(child: _buildFilePane()),
                   ])
                 : _buildFileTree(),
@@ -283,7 +283,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
 
   Widget _buildBreadcrumb() {
     return Container(
-      color: const Color(0xFF161B22),
+      color: AppColors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
@@ -301,8 +301,8 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
               widget.repo,
               style: TextStyle(
                 color: _pathStack.isEmpty
-                    ? const Color(0xFFC9D1D9)
-                    : const Color(0xFF58A6FF),
+                    ? AppColors.text
+                    : AppColors.accent,
                 fontFamily: 'monospace',
                 fontSize: 13,
               ),
@@ -311,7 +311,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           ..._pathStack.asMap().entries.map((e) => Row(children: [
                 const Text(' / ',
                     style: TextStyle(
-                        color: Color(0xFF484F58), fontSize: 13)),
+                        color: AppColors.faint, fontSize: 13)),
                 InkWell(
                   onTap: e.key < _pathStack.length - 1
                       ? () => _navigateToBreadcrumb(e.key)
@@ -320,8 +320,8 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                     e.value,
                     style: TextStyle(
                       color: e.key < _pathStack.length - 1
-                          ? const Color(0xFF58A6FF)
-                          : const Color(0xFFC9D1D9),
+                          ? AppColors.accent
+                          : AppColors.text,
                       fontFamily: 'monospace',
                       fontSize: 13,
                     ),
@@ -344,10 +344,10 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 40),
+              const Icon(Icons.error_outline, color: AppColors.danger, size: 40),
               const SizedBox(height: 8),
               Text(_error!,
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: AppColors.danger),
                   textAlign: TextAlign.center),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -367,10 +367,10 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         if (_pathStack.isNotEmpty && i == 0) {
           return ListTile(
             leading: const Icon(Icons.arrow_upward,
-                color: Color(0xFF8B949E), size: 20),
+                color: AppColors.muted, size: 20),
             title: const Text('..',
                 style: TextStyle(
-                    color: Color(0xFF8B949E),
+                    color: AppColors.muted,
                     fontFamily: 'monospace')),
             dense: true,
             onTap: _navigateBack,
@@ -381,7 +381,7 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         final isSelected = _selectedItem?.path == item.path;
         return Material(
           color: isSelected
-              ? const Color(0xFF1C2128)
+              ? AppColors.surfaceAlt
               : Colors.transparent,
           child: ListTile(
             leading: FileIcon(
@@ -392,8 +392,8 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
               item.name,
               style: TextStyle(
                 color: isSelected
-                    ? const Color(0xFF58A6FF)
-                    : const Color(0xFFC9D1D9),
+                    ? AppColors.accent
+                    : AppColors.text,
                 fontFamily: 'monospace',
                 fontSize: 13,
               ),
@@ -402,11 +402,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                 ? Text(
                     _formatSize(item.size!),
                     style: const TextStyle(
-                        color: Color(0xFF484F58), fontSize: 11),
+                        color: AppColors.faint, fontSize: 11),
                   )
                 : item.isDirectory
                     ? const Icon(Icons.chevron_right,
-                        color: Color(0xFF484F58), size: 16)
+                        color: AppColors.faint, size: 16)
                     : null,
             dense: true,
             onTap: () => _navigateTo(item),
@@ -423,12 +423,12 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.touch_app,
-                color: Color(0xFF30363D), size: 56),
+                color: AppColors.border, size: 56),
             const SizedBox(height: 12),
             Text(
               'Select a file to view',
               style: TextStyle(
-                  color: Colors.grey.shade600, fontSize: 14),
+                  color: AppColors.muted, fontSize: 14),
             ),
           ],
         ),

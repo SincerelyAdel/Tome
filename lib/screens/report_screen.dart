@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/claude_service.dart';
 import '../services/github_service.dart';
 import '../services/prefs_service.dart';
+import '../theme.dart';
 
 class ReportScreen extends StatefulWidget {
   final String owner;
@@ -120,16 +121,15 @@ class _ReportScreenState extends State<ReportScreen> {
     final isWide = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
         title: const Text('Generate Report',
-            style: TextStyle(color: Color(0xFFC9D1D9))),
-        iconTheme: const IconThemeData(color: Color(0xFFC9D1D9)),
+            style: TextStyle(color: AppColors.text)),
+        iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
           if (_report.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.copy, color: Color(0xFF8B949E)),
+              icon: const Icon(Icons.copy, color: AppColors.muted),
               tooltip: 'Copy report',
               onPressed: _copyReport,
             ),
@@ -139,12 +139,12 @@ class _ReportScreenState extends State<ReportScreen> {
           ? Row(children: [
               SizedBox(width: 340, child: _buildConfig()),
               const VerticalDivider(
-                  width: 1, color: Color(0xFF30363D)),
+                  width: 1, color: AppColors.border),
               Expanded(child: _buildOutput()),
             ])
           : Column(children: [
               Expanded(child: _buildConfig()),
-              const Divider(height: 1, color: Color(0xFF30363D)),
+              const Divider(height: 1, color: AppColors.border),
               Expanded(child: _buildOutput()),
             ]),
     );
@@ -152,7 +152,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildConfig() {
     return Container(
-      color: const Color(0xFF161B22),
+      color: AppColors.surface,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,13 +174,13 @@ class _ReportScreenState extends State<ReportScreen> {
               onPressed: () => setState(
                   () => _files.forEach((f) => f.selected = true)),
               child: const Text('All',
-                  style: TextStyle(color: Color(0xFF58A6FF))),
+                  style: TextStyle(color: AppColors.accent)),
             ),
             TextButton(
               onPressed: () => setState(
                   () => _files.forEach((f) => f.selected = false)),
               child: const Text('None',
-                  style: TextStyle(color: Color(0xFF8B949E))),
+                  style: TextStyle(color: AppColors.muted)),
             ),
           ]),
           Expanded(
@@ -197,14 +197,14 @@ class _ReportScreenState extends State<ReportScreen> {
                         title: Text(
                           f.item.path,
                           style: const TextStyle(
-                            color: Color(0xFFC9D1D9),
+                            color: AppColors.text,
                             fontFamily: 'monospace',
                             fontSize: 12,
                           ),
                         ),
                         dense: true,
-                        activeColor: const Color(0xFF238636),
-                        checkColor: Colors.white,
+                        activeColor: AppColors.accent,
+                        checkColor: AppColors.onAccent,
                       );
                     },
                   ),
@@ -219,12 +219,12 @@ class _ReportScreenState extends State<ReportScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
+                          strokeWidth: 2, color: AppColors.onAccent))
                   : const Icon(Icons.auto_awesome, size: 18),
               label: Text(_generating ? 'Generating...' : 'Generate Report'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF238636),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
@@ -243,10 +243,10 @@ class _ReportScreenState extends State<ReportScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.description_outlined,
-                color: Color(0xFF30363D), size: 64),
+                color: AppColors.border, size: 64),
             SizedBox(height: 12),
             Text('Configure and generate your report',
-                style: TextStyle(color: Color(0xFF484F58))),
+                style: TextStyle(color: AppColors.faint)),
           ],
         ),
       );
@@ -260,7 +260,7 @@ class _ReportScreenState extends State<ReportScreen> {
         child: SelectableText(
           _report,
           style: const TextStyle(
-            color: Color(0xFFC9D1D9),
+            color: AppColors.text,
             fontFamily: 'monospace',
             fontSize: 13,
             height: 1.6,
@@ -272,7 +272,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _label(String text) => Text(text,
       style: const TextStyle(
-          color: Color(0xFF8B949E),
+          color: AppColors.muted,
           fontSize: 12,
           fontWeight: FontWeight.bold));
 
@@ -282,23 +282,23 @@ class _ReportScreenState extends State<ReportScreen> {
       controller: ctrl,
       maxLines: maxLines,
       style:
-          const TextStyle(color: Color(0xFFC9D1D9), fontSize: 14),
+          const TextStyle(color: AppColors.text, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF484F58)),
+        hintStyle: const TextStyle(color: AppColors.faint),
         filled: true,
-        fillColor: const Color(0xFF0D1117),
+        fillColor: AppColors.bg,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: Color(0xFF30363D)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: Color(0xFF58A6FF)),
+          borderSide: const BorderSide(color: AppColors.accent),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -87,6 +87,46 @@ class GitHubService {
     throw Exception('Failed to fetch tree: ${response.statusCode}');
   }
 
+  /// Repos the token's owner can access (own, collaborator, org),
+  /// most recently pushed first. Includes private repos.
+  Future<List<RepoInfo>> getMyRepos() async {
+    return _getRepoList('$_baseUrl/user/repos?per_page=100&sort=pushed'
+        '&affiliation=owner,collaborator,organization_member');
+  }
+
+  /// Public repos of any user or organization.
+  Future<List<RepoInfo>> getUserRepos(String user) async {
+    return _getRepoList(
+        '$_baseUrl/users/${Uri.encodeComponent(user)}/repos?per_page=100&sort=pushed');
+  }
+
+  Future<List<RepoInfo>> _getRepoList(String url) async {
+    final response = await http.get(Uri.parse(url), headers: _headers);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List<dynamic>)
+          .map((e) => RepoInfo.fromJson(e))
+          .toList();
+    }
+    if (response.statusCode == 404) throw Exception('User not found');
+    if (response.statusCode == 401) {
+      throw Exception('GitHub token was rejected. Check it in Settings.');
+    }
+    if (response.statusCode == 403) {
+      throw Exception('GitHub rate limit hit. Add a token in Settings.');
+    }
+    throw Exception('Failed to load repos: ${response.statusCode}');
+  }
+
+  /// "SincerelyAdel", "github.com/SincerelyAdel" or "@SincerelyAdel"
+  /// -> "SincerelyAdel". Returns null for anything else.
+  static String? parseUsername(String input) {
+    input = input.trim();
+    final url = RegExp(r'github\.com/([A-Za-z0-9-]+)/?$').firstMatch(input);
+    if (url != null) return url.group(1);
+    final bare = RegExp(r'^@?([A-Za-z0-9-]+)$').firstMatch(input);
+    return bare?.group(1);
+  }
+
   bool get hasToken => token != null && token!.isNotEmpty;
 
   Future<List<WorkflowRun>> getWorkflowRuns(String owner, String repo,

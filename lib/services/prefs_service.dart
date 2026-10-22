@@ -4,6 +4,7 @@ class PrefsService {
   static const _claudeKey = 'claude_api_key';
   static const _githubKey = 'github_token';
   static const _recentReposKey = 'recent_repos';
+  static const _listOwnerKey = 'list_owner';
 
   static Future<String?> getClaudeKey() async {
     final p = await SharedPreferences.getInstance();
@@ -42,5 +43,16 @@ class PrefsService {
   static Future<void> clearRecentRepos() async {
     final p = await SharedPreferences.getInstance();
     await p.remove(_recentReposKey);
+  }
+
+  /// Whose public repos to list on the home screen when there's no token.
+  static Future<String> getListOwner() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString(_listOwnerKey) ?? 'SincerelyAdel';
+  }
+
+  static Future<void> setListOwner(String owner) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_listOwnerKey, owner);
   }
 }

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/github.dart';
 import '../models/repo_item.dart';
 import '../services/github_service.dart';
 import '../services/claude_service.dart';
 import '../services/prefs_service.dart';
 import '../widgets/file_icon.dart';
+import '../theme.dart';
 
 class FileViewerScreen extends StatefulWidget {
   final RepoItem item;
@@ -93,9 +94,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     final lang = languageForFile(widget.item.name);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
         title: Row(children: [
           FileIcon(name: widget.item.name, isDirectory: false, size: 18),
           const SizedBox(width: 8),
@@ -103,18 +103,18 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
             child: Text(
               widget.item.name,
               style: const TextStyle(
-                  color: Color(0xFFC9D1D9),
+                  color: AppColors.text,
                   fontFamily: 'monospace',
                   fontSize: 15),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ]),
-        iconTheme: const IconThemeData(color: Color(0xFFC9D1D9)),
+        iconTheme: const IconThemeData(color: AppColors.text),
         actions: [
           if (_content != null)
             IconButton(
-              icon: const Icon(Icons.copy, color: Color(0xFF8B949E)),
+              icon: const Icon(Icons.copy, color: AppColors.muted),
               tooltip: 'Copy',
               onPressed: _copy,
             ),
@@ -125,11 +125,11 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Color(0xFF58A6FF)))
+                          strokeWidth: 2, color: AppColors.accent))
                   : const Icon(Icons.auto_awesome,
-                      color: Color(0xFF58A6FF), size: 18),
+                      color: AppColors.accent, size: 18),
               label: const Text('Explain',
-                  style: TextStyle(color: Color(0xFF58A6FF))),
+                  style: TextStyle(color: AppColors.accent)),
               onPressed: _explaining ? null : _explain,
             ),
         ],
@@ -139,7 +139,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           : _error != null
               ? Center(
                   child: Text(_error!,
-                      style: const TextStyle(color: Colors.red)))
+                      style: const TextStyle(color: AppColors.danger)))
               : Column(
                   children: [
                     if (_explanation != null) _buildExplanation(),
@@ -155,25 +155,25 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF58A6FF).withOpacity(0.3)),
+        border: Border.all(color: AppColors.accent.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.auto_awesome, color: Color(0xFF58A6FF), size: 16),
+            const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
             const SizedBox(width: 6),
             const Text('Claude Explanation',
                 style: TextStyle(
-                    color: Color(0xFF58A6FF),
+                    color: AppColors.accent,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
             const Spacer(),
             IconButton(
               icon: const Icon(Icons.close,
-                  color: Color(0xFF8B949E), size: 16),
+                  color: AppColors.muted, size: 16),
               onPressed: () => setState(() => _explanation = null),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -182,7 +182,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           const SizedBox(height: 8),
           Text(_explanation!,
               style: const TextStyle(
-                  color: Color(0xFFC9D1D9), fontSize: 13, height: 1.5)),
+                  color: AppColors.text, fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -198,7 +198,11 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
           child: HighlightView(
             _content ?? '',
             language: lang,
-            theme: atomOneDarkTheme,
+            theme: {
+              ...githubTheme,
+              'root': githubTheme['root']!
+                  .copyWith(backgroundColor: AppColors.surface),
+            },
             padding: const EdgeInsets.all(16),
             textStyle:
                 const TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.5),

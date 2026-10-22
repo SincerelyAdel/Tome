@@ -7,14 +7,15 @@ and generating AI-powered lab reports via the Claude API.
 
 ## Features
 
-- **Browse** any public GitHub repository with a file tree
+- **Repo list** — your repos (incl. private, with a token) or any user's public repos; type a username to switch
+- **Browse** any GitHub repository with a file tree
 - **View** source files with syntax highlighting (Verilog, Dart, Python, etc.)
 - **Download ZIP** of the entire repository directly to your Downloads folder
 - **AI Explain** — tap "Explain" on any Verilog file for a concise Claude summary
 - **Generate Report** — select files and generate a full EQSemi lab report via Claude
 - **Actions** — see GitHub Actions runs, download a run's artifacts and install APKs straight from the app
 - **Two-pane tablet layout** — file tree on left, file content on right
-- **Dark GitHub theme** throughout
+- **Light Claude theme** — cream background, terracotta accent, serif headings
 
 ---
 
@@ -70,8 +71,8 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 
 ## Usage
 
-1. Launch the app — it pre-fills with `https://github.com/SincerelyAdel/RTL`
-2. Tap **Open** to browse the repository
+1. Launch the app — it lists your repositories (or SincerelyAdel's public ones without a token)
+2. Tap a repo to browse it, or type a repo URL / `owner/repo` / username in the top box
 3. Navigate folders, tap files to view them
 4. Tap **Download ZIP** in the toolbar to save the repo to Downloads
 5. Tap **Actions** (▶ icon) to see CI runs; open a run and tap **Get** on an
@@ -89,6 +90,7 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 ```
 lib/
 ├── main.dart                    # App entry point
+├── theme.dart                   # Claude light palette + ThemeData
 ├── models/
 │   ├── repo_item.dart           # RepoItem, RepoInfo data classes
 │   └── actions.dart             # WorkflowRun, Artifact data classes
@@ -99,7 +101,7 @@ lib/
 │   ├── artifact_service.dart    # Actions artifact download, unzip, install
 │   └── prefs_service.dart       # SharedPreferences (API keys, recent repos)
 ├── screens/
-│   ├── home_screen.dart         # Repo URL input + recent repos
+│   ├── home_screen.dart         # Repo list, URL/username input, recents
 │   ├── repo_browser_screen.dart # Two-pane file tree browser
 │   ├── file_viewer_screen.dart  # Syntax-highlighted file viewer
 │   ├── report_screen.dart       # Claude report generation
