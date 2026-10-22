@@ -5,6 +5,9 @@ on:
     branches: [main, 'ccr-*']
   workflow_dispatch:
 
+permissions:
+  contents: write  # lets the job publish the APK as a GitHub Release
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,8 +41,17 @@ jobs:
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos
 
-      - name: Build release APK
-        run: flutter build apk --release --split-per-abi --no-shrink
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APKs
+        run: |
+          # One APK that runs on any phone (easiest to install by hand)...
+          flutter build apk --release --no-shrink
+          mv build/app/outputs/flutter-apk/app-release.apk RepoViewer.apk
+          # ...plus smaller per-CPU APKs.
+          flutter build apk --release --split-per-abi --no-shrink
+          mv RepoViewer.apk build/app/outputs/flutter-apk/RepoViewer.apk
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
@@ -47,3 +59,18 @@ jobs:
           name: repoviewer-apk
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
+
+      # A release gives a direct .apk link that works on a phone without
+      # signing in: https://github.com/<owner>/<repo>/releases/latest
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: RepoViewer build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Built from `${{ github.ref_name }}` at ${{ github.sha }}.
+
+            **On a phone:** download `RepoViewer.apk` below and open it.
+          files: build/app/outputs/flutter-apk/*.apk

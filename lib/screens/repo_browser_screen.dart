@@ -4,6 +4,7 @@ import '../services/github_service.dart';
 import '../services/download_service.dart';
 import '../services/prefs_service.dart';
 import '../widgets/file_icon.dart';
+import 'actions_screen.dart';
 import 'file_viewer_screen.dart';
 import 'report_screen.dart';
 
@@ -135,6 +136,32 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     }
   }
 
+  void _openActions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ActionsScreen(
+          owner: widget.owner,
+          repo: widget.repo,
+          github: _github,
+        ),
+      ),
+    );
+  }
+
+  void _openReport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReportScreen(
+          owner: widget.owner,
+          repo: widget.repo,
+          github: _github,
+        ),
+      ),
+    );
+  }
+
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), duration: const Duration(seconds: 4)));
@@ -151,16 +178,35 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         title: Row(children: [
           const Icon(Icons.code, color: Color(0xFF58A6FF), size: 20),
           const SizedBox(width: 8),
-          Text(
-            '${widget.owner} / ${widget.repo}',
-            style: const TextStyle(
-                color: Color(0xFFC9D1D9),
-                fontFamily: 'monospace',
-                fontSize: 15),
+          Flexible(
+            child: Text(
+              isWide ? '${widget.owner} / ${widget.repo}' : widget.repo,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: Color(0xFFC9D1D9),
+                  fontFamily: 'monospace',
+                  fontSize: 15),
+            ),
           ),
         ]),
         iconTheme: const IconThemeData(color: Color(0xFFC9D1D9)),
         actions: [
+          // GitHub Actions runs and artifacts
+          if (isWide)
+            TextButton.icon(
+              icon: const Icon(Icons.play_circle_outline,
+                  color: Color(0xFFD29922), size: 18),
+              label: const Text('Actions',
+                  style: TextStyle(color: Color(0xFFD29922))),
+              onPressed: _openActions,
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.play_circle_outline,
+                  color: Color(0xFFD29922)),
+              tooltip: 'Actions',
+              onPressed: _openActions,
+            ),
           // Download ZIP button
           if (_downloading)
             Padding(
@@ -185,31 +231,35 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                 ),
               ),
             )
-          else
+          else if (isWide)
             TextButton.icon(
               icon: const Icon(Icons.download,
                   color: Color(0xFF3FB950), size: 18),
               label: const Text('Download ZIP',
                   style: TextStyle(color: Color(0xFF3FB950))),
               onPressed: _downloadZip,
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.download, color: Color(0xFF3FB950)),
+              tooltip: 'Download ZIP',
+              onPressed: _downloadZip,
             ),
           // Generate report button
-          TextButton.icon(
-            icon: const Icon(Icons.auto_awesome,
-                color: Color(0xFF58A6FF), size: 18),
-            label: const Text('Report',
-                style: TextStyle(color: Color(0xFF58A6FF))),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ReportScreen(
-                  owner: widget.owner,
-                  repo: widget.repo,
-                  github: _github,
-                ),
-              ),
+          if (isWide)
+            TextButton.icon(
+              icon: const Icon(Icons.auto_awesome,
+                  color: Color(0xFF58A6FF), size: 18),
+              label: const Text('Report',
+                  style: TextStyle(color: Color(0xFF58A6FF))),
+              onPressed: _openReport,
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.auto_awesome, color: Color(0xFF58A6FF)),
+              tooltip: 'Report',
+              onPressed: _openReport,
             ),
-          ),
           const SizedBox(width: 8),
         ],
       ),
