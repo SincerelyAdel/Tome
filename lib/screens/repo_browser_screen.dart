@@ -10,6 +10,7 @@ import 'repo_tabs/branches_tab.dart';
 import 'repo_tabs/commits_tab.dart';
 import 'repo_tabs/issues_tab.dart';
 import '../theme.dart';
+import '../widgets/delete_repo.dart';
 
 class RepoBrowserScreen extends StatefulWidget {
   final String owner;
@@ -252,6 +253,28 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
               icon: Icon(Icons.download, color: AppColors.success),
               tooltip: 'Download ZIP',
               onPressed: _downloadZip,
+            ),
+          if (_github.hasToken)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: AppColors.muted),
+              tooltip: 'More',
+              onSelected: (v) async {
+                if (v != 'delete') return;
+                final gone = await deleteRepoFlow(
+                    context, _github, widget.owner, widget.repo);
+                if (gone && context.mounted) Navigator.pop(context);
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [
+                    Icon(Icons.delete_outline, color: AppColors.danger),
+                    const SizedBox(width: 12),
+                    Text('Delete repository',
+                        style: TextStyle(color: AppColors.danger)),
+                  ]),
+                ),
+              ],
             ),
           const SizedBox(width: 8),
         ],

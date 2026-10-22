@@ -5,3 +5,6 @@ final navigatorKey = GlobalKey<NavigatorState>();
 
 /// Bumped each time Settings closes, so screens can reload saved tokens.
 final settingsChanged = ValueNotifier<int>(0);
+
+/// Bumped when a repo is created or deleted, so repo lists reload.
+final reposChanged = ValueNotifier<int>(0);

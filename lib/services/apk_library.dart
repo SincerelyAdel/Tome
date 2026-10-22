@@ -29,6 +29,7 @@ class ApkEntry {
     this.group = '',
     this.groupTitle = '',
     this.groupDetail = '',
+    this.builtFrom,
   });
 
   final ApkSource source;
@@ -49,7 +50,12 @@ class ApkEntry {
   /// "repo-viewer:14", and a line about it.
   final String group, groupTitle, groupDetail;
 
-  String get repoName => repo.isEmpty ? owner : '$owner/$repo';
+  /// For APKs made by the builder repo: the repo they were built from
+  /// ("owner/name"). They're listed under that repo.
+  final String? builtFrom;
+
+  String get repoName =>
+      builtFrom ?? (repo.isEmpty ? owner : '$owner/$repo');
 
   String get key => switch (source) {
         ApkSource.release => '$repoName/release/$assetId',
@@ -65,6 +71,9 @@ class ApkLibrary {
 
   final GitHubService github;
   final _dio = Dio();
+
+  /// The repos found by the last scan (for the Build APK picker).
+  List<RepoInfo> repos = [];
 
   static final _apkArtifact = RegExp(r'apk|android', caseSensitive: false);
 
@@ -84,6 +93,7 @@ class ApkLibrary {
     required void Function(int done, int total) onProgress,
   }) async {
     final repos = await github.getMyRepos();
+    this.repos = repos;
     var done = 0;
     onProgress(0, repos.length);
     for (var i = 0; i < repos.length; i += 6) {
@@ -107,7 +117,13 @@ class ApkLibrary {
       for (final rel in releases) {
         final tag = rel['tag_name']?.toString() ?? '';
         final relName = rel['name']?.toString() ?? '';
+        // Releases made by the APK builder say where they came from.
+        final from = RegExp(r'Built from ([\w.-]+/[\w.-]+)@')
+            .firstMatch(rel['body']?.toString() ?? '')
+            ?.group(1);
+        final builtFrom = from != null && from != r.fullName ? from : null;
         final groupDetail = [
+          if (builtFrom != null) 'Built by ${r.fullName}',
           relName.isNotEmpty ? relName : tag,
           if (rel['prerelease'] == true) 'pre-release',
           if (rel['draft'] == true) 'draft',
@@ -131,8 +147,10 @@ class ApkLibrary {
             ].join(' · '),
             assetId: a['id'],
             group: 'release-${rel['id']}',
-            groupTitle: '${r.name}:${_buildNo(tag, relName)}',
+            groupTitle:
+                '${builtFrom?.split('/').last ?? r.name}:${_buildNo(tag, relName)}',
             groupDetail: groupDetail,
+            builtFrom: builtFrom,
           ));
         }
       }

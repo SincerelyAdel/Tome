@@ -51,6 +51,18 @@ class PrefsService {
     await p.setInt(_activeAccountKey, index);
   }
 
+  /// The repo ("owner/name") whose build-apk.yml workflow builds APKs
+  /// for other repos on demand. Empty when not set up.
+  static Future<String> getBuilderRepo() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString('apk_builder_repo') ?? '';
+  }
+
+  static Future<void> setBuilderRepo(String repo) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('apk_builder_repo', repo.trim());
+  }
+
   static Future<bool> getDarkMode() async {
     final p = await SharedPreferences.getInstance();
     return p.getBool(_darkModeKey) ?? true;

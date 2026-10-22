@@ -396,6 +396,24 @@ extension GitHubOrg on GitHubService {
       api('/repos/$owner/$repo/actions/workflows/$workflowId/dispatches',
           method: 'POST', body: {'ref': ref});
 
+  /// Deletes a repository for good (GitHub keeps it restorable for a while
+  /// under Settings → Repositories → Deleted repositories).
+  Future<void> deleteRepo(String owner, String repo) =>
+      api('/repos/${_e(owner)}/${_e(repo)}', method: 'DELETE');
+
+  /// Starts the APK builder workflow in [builder] ("owner/name") for
+  /// [source] ("owner/name"). [ref] blank means the default branch.
+  Future<void> startApkBuild(
+      String builder, String source, String ref, String abi) async {
+    final info = await api('/repos/$builder') as Map;
+    await api('/repos/$builder/actions/workflows/build-apk.yml/dispatches',
+        method: 'POST',
+        body: {
+          'ref': info['default_branch'] ?? 'main',
+          'inputs': {'repo': source, 'ref': ref, 'abi': abi},
+        });
+  }
+
   /// [role] is direct_member or admin.
   Future<void> inviteMember(String org, String login, String role) async {
     final user = await api('/users/${_e(login)}');

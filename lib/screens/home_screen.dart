@@ -6,6 +6,7 @@ import '../services/github_org.dart';
 import '../services/github_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
+import '../widgets/delete_repo.dart';
 import 'profile_screen.dart';
 import 'repo_browser_screen.dart';
 import 'settings_screen.dart';
@@ -425,7 +426,45 @@ class _AccountPageState extends State<_AccountPage>
   void initState() {
     super.initState();
     _filterCtrl.addListener(() => setState(() {}));
+    reposChanged.addListener(_reload);
     _reload();
+  }
+
+  /// Long-press a repo: open it, or delete it in one step.
+  Future<void> _repoMenu(RepoInfo r) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            title: Text('${r.owner}/${r.name}',
+                style: TextStyle(
+                    color: AppColors.text, fontWeight: FontWeight.w600)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.open_in_new),
+            title: const Text('Open'),
+            onTap: () => Navigator.pop(ctx, 'open'),
+          ),
+          if (_hasToken)
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: AppColors.danger),
+              title: Text('Delete repository',
+                  style: TextStyle(color: AppColors.danger)),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 'open') widget.onOpenRepo(r.owner, r.name);
+    if (choice == 'delete') {
+      final gone = await deleteRepoFlow(
+          context, GitHubService(token: widget.token), r.owner, r.name);
+      if (gone && mounted) setState(() => _repos?.remove(r));
+    }
   }
 
   @override
@@ -702,6 +741,7 @@ class _AccountPageState extends State<_AccountPage>
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => widget.onOpenRepo(r.owner, r.name),
+        onLongPress: () => _repoMenu(r),
         child: Padding(
           padding: EdgeInsets.all(pad),
           child: Column(
@@ -820,6 +860,7 @@ class _AccountPageState extends State<_AccountPage>
 
   @override
   void dispose() {
+    reposChanged.removeListener(_reload);
     _filterCtrl.dispose();
     super.dispose();
   }

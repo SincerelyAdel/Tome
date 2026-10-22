@@ -13,6 +13,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _claudeCtrl = TextEditingController();
   final _github1Ctrl = TextEditingController();
   final _github2Ctrl = TextEditingController();
+  final _builderCtrl = TextEditingController();
   bool _claudeVisible = false;
   bool _github1Visible = false;
   bool _github2Visible = false;
@@ -28,11 +29,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final claude = await PrefsService.getClaudeKey();
     final github1 = await PrefsService.getGithubToken();
     final github2 = await PrefsService.getGithubToken2();
+    final builder = await PrefsService.getBuilderRepo();
     if (!mounted) return;
     setState(() {
       _claudeCtrl.text = claude ?? '';
       _github1Ctrl.text = github1 ?? '';
       _github2Ctrl.text = github2 ?? '';
+      _builderCtrl.text = builder;
     });
   }
 
@@ -40,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await PrefsService.setClaudeKey(_claudeCtrl.text.trim());
     await PrefsService.setGithubToken(_github1Ctrl.text.trim());
     await PrefsService.setGithubToken2(_github2Ctrl.text.trim());
+    await PrefsService.setBuilderRepo(_builderCtrl.text);
     setState(() => _saved = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _saved = false);
@@ -96,6 +100,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             _hint('Token for your second account. On the home screen, '
                 'swipe left or right to switch between accounts.'),
+            const SizedBox(height: 28),
+            _sectionTitle('APK builder repo'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _builderCtrl,
+              autocorrect: false,
+              enableSuggestions: false,
+              style: TextStyle(color: AppColors.text, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: 'owner/apk-builder',
+                hintStyle: TextStyle(color: AppColors.faint),
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _hint('A repo with the build-apk.yml workflow (see tools/apk-builder '
+                'in the RepoViewer repo). The APKs page then gets a Build APK '
+                'button that builds any of your repos on demand.'),
             const SizedBox(height: 36),
             SizedBox(
               width: double.infinity,
@@ -197,6 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _claudeCtrl.dispose();
     _github1Ctrl.dispose();
     _github2Ctrl.dispose();
+    _builderCtrl.dispose();
     super.dispose();
   }
 }

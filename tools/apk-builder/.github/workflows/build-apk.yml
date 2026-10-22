@@ -1,0 +1,144 @@
+name: Build APK
+
+# Builds an Android app (Flutter or Gradle) from another repo, only when
+# asked: from RepoViewer's "Build APK" button or this repo's Actions tab.
+# Nothing runs on push, so your source repos spend no Actions minutes.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repo to build (owner/name)
+        required: true
+      ref:
+        description: Branch, tag or commit (blank = default branch)
+        required: false
+        default: ''
+      abi:
+        description: arm64 builds for almost every phone and is fastest
+        type: choice
+        options: [arm64, all]
+        default: arm64
+
+run-name: Build ${{ inputs.repo }} ${{ inputs.ref }}
+
+# A new build of the same repo and branch cancels the one still running.
+concurrency:
+  group: build-${{ inputs.repo }}-${{ inputs.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write  # publish the APKs as a release of this repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Linux minutes cost 1x (Windows 2x, macOS 10x)
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out ${{ inputs.repo }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repo }}
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.SOURCE_TOKEN }}
+          path: src
+
+      - name: Detect the project
+        id: info
+        working-directory: src
+        env:
+          REPO: ${{ inputs.repo }}
+        run: |
+          if [ -f pubspec.yaml ]; then kind=flutter
+          elif [ -f gradlew ]; then kind=gradle
+          else
+            echo "::error::$REPO has no pubspec.yaml or gradlew at its root."
+            exit 1
+          fi
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "name=${REPO#*/}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            src/**/*.gradle*
+            src/**/gradle-wrapper.properties
+
+      - name: Set up Flutter
+        if: steps.info.outputs.kind == 'flutter'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build (Flutter)
+        if: steps.info.outputs.kind == 'flutter'
+        working-directory: src
+        env:
+          ABI: ${{ inputs.abi }}
+        run: |
+          flutter pub get
+          if [ "$ABI" = arm64 ]; then
+            flutter build apk --release --split-per-abi --target-platform android-arm64
+          else
+            flutter build apk --release --split-per-abi
+          fi
+
+      - name: Build (Gradle)
+        if: steps.info.outputs.kind == 'gradle'
+        working-directory: src
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      # Every APK is signed with this repo's one key, so new builds install
+      # as updates over older ones on your devices.
+      - name: Collect and sign the APKs
+        env:
+          NAME: ${{ steps.info.outputs.name }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir out
+          find src -path '*/outputs/*' -name '*.apk' ! -name '*androidTest*' |
+          while read -r f; do
+            base=$(basename "$f" .apk); base=${base#app-}; base=${base%-unsigned}
+            cp "$f" "out/$NAME-$base.apk"
+          done
+          if [ -z "$(ls out)" ]; then echo "::error::The build made no APK."; exit 1; fi
+
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > key.jks
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: using a throwaway key, so these APKs won't install as updates over earlier builds."
+            KEYSTORE_PASSWORD=throwaway
+            keytool -genkeypair -keystore key.jks -storepass "$KEYSTORE_PASSWORD" \
+              -keypass "$KEYSTORE_PASSWORD" -alias key -keyalg RSA -validity 10000 \
+              -dname "CN=APK builder" >/dev/null
+          fi
+          export KEYSTORE_PASSWORD
+          tools=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          for f in out/*.apk; do
+            "$tools/zipalign" -f -p 4 "$f" aligned.apk
+            "$tools/apksigner" sign --ks key.jks --ks-pass env:KEYSTORE_PASSWORD \
+              --out "$f" aligned.apk
+          done
+          rm -f aligned.apk key.jks out/*.idsig
+          ls -lh out
+
+      # RepoViewer's APKs page lists this release under the source repo,
+      # titled "<name>:<run number>".
+      - name: Publish a release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.info.outputs.name }}-${{ github.run_number }}
+          name: ${{ steps.info.outputs.name }} build ${{ github.run_number }}
+          make_latest: false
+          body: |
+            Built from ${{ inputs.repo }}@${{ steps.info.outputs.sha }} (${{ inputs.ref || 'default branch' }}).
+          files: out/*.apk
