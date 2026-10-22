@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
@@ -124,7 +125,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
               tooltip: 'Copy',
               onPressed: _copy,
             ),
-          if (_content != null && lang == 'verilog')
+          if (_content != null && lang != 'plaintext')
             TextButton.icon(
               icon: _explaining
                   ? SizedBox(
@@ -194,25 +195,109 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
     );
   }
 
+  /// Code on a frosted glass panel that fills the whole pane.
   Widget _buildCode(String lang) {
-    return Scrollbar(
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(12),
-          child: HighlightView(
-            _content ?? '',
-            language: lang,
-            theme: {
-              ..._codeTheme,
-              'root': _codeTheme['root']!.copyWith(
-                  backgroundColor: AppColors.surface, color: AppColors.text),
-            },
-            padding: const EdgeInsets.all(16),
-            textStyle:
-                const TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.5),
+    final dark = AppColors.isDark;
+    final radius = BorderRadius.circular(16);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Soft gold light behind the glass, so the frost has something
+          // to blur.
+          ClipRRect(
+            borderRadius: radius,
+            child: Stack(children: [
+              _glow(left: -120, top: -100, size: 460,
+                  color: AppColors.accent.withOpacity(dark ? 0.30 : 0.22)),
+              _glow(right: -140, bottom: -120, size: 560,
+                  color: AppColors.accentLight.withOpacity(dark ? 0.22 : 0.30)),
+              _glow(right: 180, top: 120, size: 300,
+                  color: AppColors.accent.withOpacity(dark ? 0.12 : 0.10)),
+            ]),
           ),
+          ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: dark
+                        ? [
+                            Colors.white.withOpacity(0.07),
+                            Colors.white.withOpacity(0.02),
+                          ]
+                        : [
+                            Colors.white.withOpacity(0.70),
+                            Colors.white.withOpacity(0.45),
+                          ],
+                  ),
+                  border: Border.all(
+                    color: dark
+                        ? Colors.white.withOpacity(0.10)
+                        : Colors.white.withOpacity(0.85),
+                  ),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, box) => Scrollbar(
+                    child: SingleChildScrollView(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          // At least the pane's size: no empty strips.
+                          constraints: BoxConstraints(
+                              minWidth: box.maxWidth, minHeight: box.maxHeight),
+                          child: HighlightView(
+                            _content ?? '',
+                            language: lang,
+                            theme: {
+                              ..._codeTheme,
+                              'root': _codeTheme['root']!.copyWith(
+                                  backgroundColor: Colors.transparent,
+                                  color: AppColors.text),
+                            },
+                            padding: const EdgeInsets.all(20),
+                            textStyle: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 14,
+                                height: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glow(
+      {double? left,
+      double? top,
+      double? right,
+      double? bottom,
+      required double size,
+      required Color color}) {
+    return Positioned(
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
+      width: size,
+      height: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
         ),
       ),
     );

@@ -24,7 +24,7 @@ class ClaudeService {
           {
             'role': 'user',
             'content':
-                'Explain this Verilog file concisely as an IC design engineer would. Focus on what it does, its ports, and any key design decisions.\n\nFile: $filename\n\n$content'
+                'Explain this file concisely, as an experienced engineer in its language would. Focus on what it does, its main interfaces (ports, functions or classes), and any key design decisions.\n\nFile: $filename\n\n$content'
           }
         ],
       }),
