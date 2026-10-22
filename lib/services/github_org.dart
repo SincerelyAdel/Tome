@@ -360,6 +360,17 @@ extension GitHubOrg on GitHubService {
           method: 'POST',
           body: {'event': event, if (body.trim().isNotEmpty) 'body': body});
 
+  /// Marks a pull request as a draft, or ready for review.
+  Future<void> setPullDraft(String nodeId, bool draft) => graphql(
+      draft
+          ? r'mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id}) { clientMutationId } }'
+          : r'mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { clientMutationId } }',
+      {'id': nodeId});
+
+  /// Merges the base branch into the pull request's branch.
+  Future<void> updatePullBranch(String owner, String repo, int number) =>
+      api('/repos/$owner/$repo/pulls/$number/update-branch', method: 'PUT');
+
   /// [method] is merge, squash or rebase.
   Future<void> mergePull(
           String owner, String repo, int number, String method) =>

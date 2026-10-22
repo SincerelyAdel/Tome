@@ -200,6 +200,11 @@ class GhPullDetail {
   final String mergeableState; // clean, dirty, blocked, unstable, unknown
   final List<GhUser> requestedReviewers;
 
+  /// Null while GitHub is still working out whether it can merge.
+  final bool? mergeable;
+  final bool draft;
+  final String nodeId;
+
   const GhPullDetail({
     required this.commits,
     required this.additions,
@@ -211,6 +216,9 @@ class GhPullDetail {
     required this.merged,
     required this.mergeableState,
     required this.requestedReviewers,
+    this.mergeable,
+    this.draft = false,
+    this.nodeId = '',
   });
 
   factory GhPullDetail.fromJson(Map<String, dynamic> json) => GhPullDetail(
@@ -226,6 +234,9 @@ class GhPullDetail {
         requestedReviewers: ((json['requested_reviewers'] as List?) ?? [])
             .map((e) => GhUser.fromJson(e))
             .toList(),
+        mergeable: json['mergeable'] as bool?,
+        draft: json['draft'] == true,
+        nodeId: json['node_id'] ?? '',
       );
 }
 

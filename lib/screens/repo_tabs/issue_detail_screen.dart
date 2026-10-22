@@ -80,12 +80,19 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     }
   }
 
-  Future<void> _loadPull() async {
+  Future<void> _loadPull({int attempt = 0}) async {
     try {
       final p = await widget.github.getPull(widget.owner, widget.repo, _i.number);
       if (!mounted) return;
       setState(() => _pull = p);
-      _loadChecks();
+      if (attempt == 0) _loadChecks();
+      // GitHub works out mergeability in the background and answers
+      // "unknown" until it's done, so ask again shortly.
+      final pending = p.mergeable == null || p.mergeableState == 'unknown';
+      if (pending && _i.isOpen && !p.merged && attempt < 5) {
+        Future.delayed(Duration(seconds: 2 + attempt),
+            () => mounted ? _loadPull(attempt: attempt + 1) : null);
+      }
     } catch (_) {/* header falls back to list data */}
   }
 
@@ -236,6 +243,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
         github: widget.github,
         issue: _i,
         pull: _pull,
+        checks: _checks,
+        timeline: _timeline,
         onChanged: _reloadPage,
       );
 
