@@ -22,8 +22,13 @@ on:
         description: Flutter version (blank = the repo's .flutter-version or .fvmrc, else latest stable)
         required: false
         default: ''
+      runner:
+        description: Where to build (my-pc = the self-hosted runner labelled apk-builder)
+        type: choice
+        options: [github, my-pc]
+        default: github
 
-run-name: Build ${{ inputs.repo }} ${{ inputs.ref }}
+run-name: Build ${{ inputs.repo }} ${{ inputs.ref }} on ${{ inputs.runner || 'github' }}
 
 # A new build of the same repo and branch cancels the one still running.
 concurrency:
@@ -33,9 +38,15 @@ concurrency:
 permissions:
   contents: write  # publish the APKs as a release of this repo
 
+defaults:
+  run:
+    shell: bash  # Git Bash on a Windows PC
+
 jobs:
   build:
-    runs-on: ubuntu-latest  # Linux minutes cost 1x (Windows 2x, macOS 10x)
+    # GitHub's Linux machines (1x minutes; free in public repos), or your
+    # own PC's runner, which costs no minutes and keeps its caches.
+    runs-on: ${{ inputs.runner == 'my-pc' && fromJSON('["self-hosted", "apk-builder"]') || 'ubuntu-latest' }}
     timeout-minutes: 25
 
     steps:
@@ -74,6 +85,7 @@ jobs:
           echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java
+        if: inputs.runner != 'my-pc'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -84,7 +96,7 @@ jobs:
             src/**/gradle-wrapper.properties
 
       - name: Set up Flutter
-        if: steps.info.outputs.kind == 'flutter'
+        if: steps.info.outputs.kind == 'flutter' && inputs.runner != 'my-pc'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -108,6 +120,7 @@ jobs:
         if: steps.info.outputs.kind == 'gradle'
         working-directory: src
         run: |
+          sed -i 's/\r$//' gradlew  # Windows checkouts may add CRLF
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
 
@@ -137,10 +150,14 @@ jobs:
               -dname "CN=APK builder" >/dev/null
           fi
           export KEYSTORE_PASSWORD
-          tools=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          if command -v cygpath >/dev/null; then sdk=$(cygpath -u "$sdk"); fi
+          tools=$(ls -d "$sdk"/build-tools/* | sort -V | tail -1)
+          zipalign="$tools/zipalign"; [ -f "$zipalign.exe" ] && zipalign="$zipalign.exe"
+          apksigner="$tools/apksigner"; [ -f "$apksigner.bat" ] && apksigner="$apksigner.bat"
           for f in out/*.apk; do
-            "$tools/zipalign" -f -p 4 "$f" aligned.apk
-            "$tools/apksigner" sign --ks key.jks --ks-pass env:KEYSTORE_PASSWORD \
+            "$zipalign" -f -p 4 "$f" aligned.apk
+            "$apksigner" sign --ks key.jks --ks-pass env:KEYSTORE_PASSWORD \
               --out "$f" aligned.apk
           done
           rm -f aligned.apk key.jks out/*.idsig

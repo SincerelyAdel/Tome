@@ -454,14 +454,21 @@ extension GitHubOrg on GitHubService {
 
   /// Starts the APK builder workflow in [builder] ("owner/name") for
   /// [source] ("owner/name"). [ref] blank means the default branch.
-  Future<void> startApkBuild(
-      String builder, String source, String ref, String abi) async {
+  /// [runner] is "github" (GitHub's machines) or "my-pc" (your own PC's
+  /// self-hosted runner).
+  Future<void> startApkBuild(String builder, String source, String ref,
+      String abi, String runner) async {
     final info = await api('/repos/$builder') as Map;
     await api('/repos/$builder/actions/workflows/build-apk.yml/dispatches',
         method: 'POST',
         body: {
           'ref': info['default_branch'] ?? 'main',
-          'inputs': {'repo': source, 'ref': ref, 'abi': abi},
+          'inputs': {
+            'repo': source,
+            'ref': ref,
+            'abi': abi,
+            'runner': runner,
+          },
         });
   }
 

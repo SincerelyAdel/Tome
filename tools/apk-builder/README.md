@@ -47,9 +47,12 @@ is older than the latest Flutter accepts.
   only `arm64` is built by default, Gradle and Flutter downloads are cached,
   a newer build of the same branch cancels the older one, and a build stops
   after 25 minutes.
-- **Your own PC:** a
+- **Your own PC:** pick **Run on: My PC** (the `runner: my-pc` input) and
+  the build runs on a
   [self-hosted runner](https://docs.github.com/actions/hosting-your-own-runners)
-  costs no minutes at all. Change `runs-on: ubuntu-latest` to
-  `runs-on: self-hosted`.
+  labelled `apk-builder`: no minutes, and Gradle/Flutter stay cached. It uses
+  the PC's own Flutter, Java and Android SDK, and on Windows needs Git Bash
+  ahead of WSL's `bash` on the runner's PATH. Jobs wait in the queue while
+  the PC is off or asleep; pick GitHub instead then.
 - Remove the `push:` trigger from workflows in your source repos so they only
   build here.

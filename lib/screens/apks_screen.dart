@@ -97,6 +97,8 @@ class _ApksScreenState extends State<ApksScreen> {
     var repo = preset ?? '';
     final ref = TextEditingController();
     var abi = 'arm64';
+    var runner = await PrefsService.getBuildRunner();
+    if (!mounted) return;
     final go = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -143,6 +145,26 @@ class _ApksScreenState extends State<ApksScreen> {
                       (i) => setD(() => abi = i == 0 ? 'arm64' : 'all')),
                 ),
               ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Text('Run on', style: TextStyle(color: AppColors.muted)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: segmentChips(
+                      ['GitHub', 'My PC'],
+                      runner == 'my-pc' ? 1 : 0,
+                      (i) => setD(() => runner = i == 0 ? 'github' : 'my-pc')),
+                ),
+              ]),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                    runner == 'my-pc'
+                        ? 'Fastest, no minutes used. Waits in the queue while '
+                            'your PC is off or asleep.'
+                        : "GitHub's machines. Free for a public builder repo.",
+                    style: TextStyle(color: AppColors.faint, fontSize: 12.5)),
+              ),
             ]),
           ),
           actions: [
@@ -159,11 +181,13 @@ class _ApksScreenState extends State<ApksScreen> {
       ),
     );
     if (go != true || !mounted) return;
+    PrefsService.setBuildRunner(runner);
     await runAction(
         context,
-        () => widget.github.startApkBuild(_builder, repo, ref.text.trim(), abi),
-        done: 'Building $repo in $_builder. It shows up here when it '
-            'finishes, usually in 5 to 10 minutes.');
+        () => widget.github
+            .startApkBuild(_builder, repo, ref.text.trim(), abi, runner),
+        done: 'Building $repo ${runner == 'my-pc' ? 'on your PC' : 'on GitHub'}. '
+            'It shows up here when it finishes.');
   }
 
   @override

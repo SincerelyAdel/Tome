@@ -63,6 +63,17 @@ class PrefsService {
     await p.setString('apk_builder_repo', repo.trim());
   }
 
+  /// Where Build APK runs by default: "github" or "my-pc".
+  static Future<String> getBuildRunner() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString('apk_build_runner') ?? 'github';
+  }
+
+  static Future<void> setBuildRunner(String runner) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('apk_build_runner', runner);
+  }
+
   static Future<bool> getDarkMode() async {
     final p = await SharedPreferences.getInstance();
     return p.getBool(_darkModeKey) ?? true;
