@@ -42,15 +42,9 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   List<GhCheckRun>? _checks;
   final Map<int, String> _tabErrors = {};
 
-  // Files changed: the page scroll, the file tree that stays in view while
-  // the diffs scroll past, and a key per diff card to jump to it.
-  final _scroll = ScrollController();
-  final _bodyKey = GlobalKey();
-  final _filesKey = GlobalKey();
-  final _treeOffset = ValueNotifier<double>(0);
+  // Files changed: a key per diff card so the file tree can jump to it.
   final Map<String, GlobalKey> _fileKeys = {};
   String? _selectedFile;
-  double _viewportH = 800;
 
   GhIssue get _i => widget.issue;
   bool get _isPr => _i.isPullRequest;
@@ -58,31 +52,8 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _scroll.addListener(_placeTree);
     _loadTimeline();
     if (_isPr) _loadPull();
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    _treeOffset.dispose();
-    super.dispose();
-  }
-
-  static const _treeGap = 12.0;
-
-  double get _treeH => _viewportH - 2 * _treeGap;
-
-  /// Slides the file tree down so it stays on screen while the diffs next
-  /// to it scroll, without running past the last diff.
-  void _placeTree() {
-    final row = _filesKey.currentContext?.findRenderObject() as RenderBox?;
-    final body = _bodyKey.currentContext?.findRenderObject() as RenderBox?;
-    if (row == null || body == null || !row.attached) return;
-    final top = row.localToGlobal(Offset.zero, ancestor: body).dy;
-    final max = row.size.height - _treeH;
-    _treeOffset.value = max <= 0 ? 0 : (_treeGap - top).clamp(0.0, max);
   }
 
   void _jumpToFile(GhFileChange f) {
@@ -174,19 +145,56 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
             style: TextStyle(color: AppColors.text, fontSize: 16)),
         iconTheme: IconThemeData(color: AppColors.text),
       ),
-      body: LayoutBuilder(
-        key: _bodyKey,
-        builder: (context, box) {
-          _viewportH = box.maxHeight;
-          return _page(wide, hPad);
-        },
+      body: _isPr && _tab == 3 && wide && (_files?.isNotEmpty ?? false)
+          ? _filesSplit(hPad)
+          : _page(wide, hPad),
+    );
+  }
+
+  /// Files changed on a wide screen: the file tree and the diffs scroll
+  /// separately under a fixed header.
+  Widget _filesSplit(double hPad) {
+    final f = _files!;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _header(true),
+          const SizedBox(height: 18),
+          _tabBar(),
+          const SizedBox(height: 16),
+          _filesSummary(f),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 300,
+                  child: FileTree(
+                      files: f, selected: _selectedFile, onTap: _jumpToFile),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 48),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _cards(f),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _page(bool wide, double hPad) {
     return ListView(
-        controller: _scroll,
         padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 48),
         children: [
           _header(wide),
@@ -216,7 +224,7 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
           else if (_tab == 2)
             _checksTab()
           else
-            _filesTab(wide),
+            _filesTab(),
         ],
     );
   }
@@ -1085,63 +1093,39 @@ class _IssueDetailScreenState extends State<IssueDetailScreen> {
     );
   }
 
-  Widget _filesTab(bool wide) {
+  Widget _filesSummary(List<GhFileChange> f) {
+    final adds = f.fold<int>(0, (a, x) => a + x.additions);
+    final dels = f.fold<int>(0, (a, x) => a + x.deletions);
+    return Row(children: [
+      Text('${f.length} file${f.length == 1 ? '' : 's'} changed  ',
+          style: TextStyle(color: AppColors.text, fontSize: 14)),
+      diffStat(adds, dels, fontSize: 14),
+      const SizedBox(width: 6),
+      diffBar(adds, dels),
+    ]);
+  }
+
+  /// Files changed on a narrow screen: the tree in a box above the diffs.
+  Widget _filesTab() {
     final f = _files;
     if (f == null) return tabMessage(error: _tabErrors[3], onRetry: _loadFiles);
     if (f.isEmpty) return tabMessage(empty: 'No files changed');
-    final adds = f.fold<int>(0, (a, x) => a + x.additions);
-    final dels = f.fold<int>(0, (a, x) => a + x.deletions);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(children: [
-          Text('${f.length} file${f.length == 1 ? '' : 's'} changed  ',
-              style: TextStyle(color: AppColors.text, fontSize: 14)),
-          diffStat(adds, dels, fontSize: 14),
-          const SizedBox(width: 6),
-          diffBar(adds, dels),
-        ]),
+        _filesSummary(f),
         const SizedBox(height: 12),
-        if (!wide) ...[
-          Container(
-            height: 320,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: FileTree(
-                files: f, selected: _selectedFile, onTap: _jumpToFile),
+        Container(
+          height: 320,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(height: 14),
-          ..._cards(f),
-        ] else
-          Row(
-            key: _filesKey,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 300,
-                child: ValueListenableBuilder<double>(
-                  valueListenable: _treeOffset,
-                  builder: (_, off, child) => Transform.translate(
-                      offset: Offset(0, off), child: child),
-                  child: SizedBox(
-                    height: _treeH,
-                    child: FileTree(
-                        files: f, selected: _selectedFile, onTap: _jumpToFile),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: _cards(f),
-                ),
-              ),
-            ],
-          ),
+          child: FileTree(files: f, selected: _selectedFile, onTap: _jumpToFile),
+        ),
+        const SizedBox(height: 14),
+        ..._cards(f),
       ],
     );
   }

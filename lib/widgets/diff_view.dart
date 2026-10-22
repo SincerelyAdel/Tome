@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:highlight/highlight.dart' show highlight, Node;
 import '../models/github_models.dart';
 import '../theme.dart';
+import 'file_icon.dart';
 import 'gh_widgets.dart';
 
 /// Green used for additions in diffs.
@@ -43,6 +47,64 @@ Widget diffBar(int additions, int deletions) {
   );
 }
 
+/// Highlights [code] as [language] and returns the spans of each line, so
+/// diff lines can be coloured one by one. Falls back to plain text.
+List<List<TextSpan>> highlightLines(String code, String language) {
+  List<List<TextSpan>> plain() =>
+      [for (final l in code.split('\n')) [TextSpan(text: l)]];
+  if (language == 'plaintext') return plain();
+  List<Node>? nodes;
+  try {
+    nodes = highlight.parse(code, language: language).nodes;
+  } catch (_) {}
+  if (nodes == null) return plain();
+
+  final theme = AppColors.isDark ? atomOneDarkTheme : githubTheme;
+  final lines = <List<TextSpan>>[[]];
+  void add(String text, TextStyle? style) {
+    final parts = text.split('\n');
+    for (var i = 0; i < parts.length; i++) {
+      if (i > 0) lines.add([]);
+      if (parts[i].isNotEmpty) {
+        lines.last.add(TextSpan(text: parts[i], style: style));
+      }
+    }
+  }
+
+  void walk(Node n, TextStyle? style) {
+    final t = n.className == null ? null : theme[n.className];
+    // Only colour and weight: the diff rows keep their own backgrounds.
+    final own = t == null
+        ? style
+        : (style ?? const TextStyle()).merge(TextStyle(
+            color: t.color, fontWeight: t.fontWeight, fontStyle: t.fontStyle));
+    if (n.value != null) {
+      add(n.value!, own);
+    } else {
+      for (final c in n.children ?? const <Node>[]) {
+        walk(c, own);
+      }
+    }
+  }
+
+  for (final n in nodes) {
+    walk(n, null);
+  }
+  return lines;
+}
+
+enum _Kind { hunk, context, add, del, note }
+
+class _Line {
+  _Line(this.kind, this.text, {this.oldNo, this.newNo, this.index = -1});
+  final _Kind kind;
+  final String text;
+  final int? oldNo, newNo;
+
+  /// Line number inside the old or new code stream used for highlighting.
+  final int index;
+}
+
 /// One changed file: header with name and counts, then a colored diff.
 /// Tap the header to collapse it.
 class DiffFileCard extends StatefulWidget {
@@ -56,6 +118,52 @@ class DiffFileCard extends StatefulWidget {
 
 class _DiffFileCardState extends State<DiffFileCard> {
   bool _collapsed = false;
+
+  // Parsed and highlighted diff, rebuilt when the theme changes.
+  List<_Line>? _lines;
+  List<List<TextSpan>> _old = [], _new = [];
+  bool? _builtDark;
+  int _numWidth = 1;
+
+  /// Splits the patch into lines with their old/new line numbers, and
+  /// highlights the old and new code separately so strings and comments
+  /// spanning several lines still colour right.
+  void _parse(String patch) {
+    final lines = <_Line>[];
+    final oldCode = <String>[], newCode = <String>[];
+    var o = 0, n = 0;
+    final hunk = RegExp(r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@');
+    for (final raw in patch.split('\n')) {
+      final m = hunk.firstMatch(raw);
+      if (m != null) {
+        o = int.parse(m.group(1)!);
+        n = int.parse(m.group(2)!);
+        lines.add(_Line(_Kind.hunk, raw));
+      } else if (raw.startsWith('\\')) {
+        lines.add(_Line(_Kind.note, raw));
+      } else if (raw.startsWith('+')) {
+        lines.add(_Line(_Kind.add, raw.substring(1),
+            newNo: n++, index: newCode.length));
+        newCode.add(raw.substring(1));
+      } else if (raw.startsWith('-')) {
+        lines.add(_Line(_Kind.del, raw.substring(1),
+            oldNo: o++, index: oldCode.length));
+        oldCode.add(raw.substring(1));
+      } else {
+        final text = raw.isEmpty ? '' : raw.substring(1);
+        lines.add(_Line(_Kind.context, text,
+            oldNo: o++, newNo: n++, index: newCode.length));
+        oldCode.add(text);
+        newCode.add(text);
+      }
+    }
+    final lang = languageForFile(widget.file.filename);
+    _old = highlightLines(oldCode.join('\n'), lang);
+    _new = highlightLines(newCode.join('\n'), lang);
+    _numWidth = '${o > n ? o : n}'.length;
+    _lines = lines;
+    _builtDark = AppColors.isDark;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,24 +222,52 @@ class _DiffFileCardState extends State<DiffFileCard> {
             style: TextStyle(color: AppColors.faint, fontSize: 13)),
       );
     }
-    final lines = patch.split('\n').map((line) {
+    if (_lines == null || _builtDark != AppColors.isDark) _parse(patch);
+    final num = TextStyle(color: AppColors.faint);
+    String pad(int? x) => (x?.toString() ?? '').padLeft(_numWidth);
+    final lines = _lines!.map((l) {
       Color? bg;
-      Color fg = AppColors.text;
-      if (line.startsWith('@@')) {
-        bg = AppColors.accent.withOpacity(0.10);
-        fg = AppColors.muted;
-      } else if (line.startsWith('+')) {
-        bg = diffAddBg;
-      } else if (line.startsWith('-')) {
-        bg = diffDelBg;
+      final spans = <InlineSpan>[];
+      switch (l.kind) {
+        case _Kind.hunk:
+        case _Kind.note:
+          bg = l.kind == _Kind.hunk ? AppColors.accent.withOpacity(0.10) : null;
+          spans.add(TextSpan(
+              text: '${' ' * (_numWidth * 2 + 4)}${l.text}',
+              style: TextStyle(color: AppColors.muted)));
+        default:
+          final (String mark, List<List<TextSpan>> src) = switch (l.kind) {
+            _Kind.add => ('+', _new),
+            _Kind.del => ('-', _old),
+            _ => (' ', _new),
+          };
+          bg = switch (l.kind) {
+            _Kind.add => diffAddBg,
+            _Kind.del => diffDelBg,
+            _ => null,
+          };
+          spans.add(TextSpan(
+              text: '${pad(l.oldNo)} ${pad(l.newNo)} ', style: num));
+          spans.add(TextSpan(
+              text: '$mark ',
+              style: TextStyle(
+                  color: l.kind == _Kind.add
+                      ? diffAddText
+                      : l.kind == _Kind.del
+                          ? ghClosed
+                          : AppColors.faint)));
+          final code = l.index >= 0 && l.index < src.length
+              ? src[l.index]
+              : [TextSpan(text: l.text)];
+          spans.addAll(code);
       }
       return Container(
         color: bg,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
-        child: Text(line.isEmpty ? ' ' : line,
+        child: Text.rich(TextSpan(children: spans),
             softWrap: false,
             style: TextStyle(
-                color: fg,
+                color: AppColors.text,
                 fontFamily: 'monospace',
                 fontSize: 12.5,
                 height: 1.45)),
