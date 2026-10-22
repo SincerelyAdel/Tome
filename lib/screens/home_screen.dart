@@ -249,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   icon: Icon(Icons.arrow_upward,
                       size: 20,
-                      color: AppColors.isDark ? Colors.white : Colors.black),
+                      color: AppColors.isDark ? Colors.black : Colors.white),
                   tooltip: 'Go',
                   onPressed: () => _submit(_inputCtrl.text),
                 ),
