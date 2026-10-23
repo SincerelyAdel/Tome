@@ -35,6 +35,19 @@ class RepoItem {
   }
 }
 
+/// The repo that builds this app's APK. Its CI pushes constantly, so in a
+/// "recently pushed" list it would always sit on top; it's kept last instead.
+const kAppRepoName = 'repo-viewer';
+
+extension AppRepoLast on List<RepoInfo> {
+  /// The same repos with the APK builder repo (any owner, forks too) moved
+  /// to the end. Everything else keeps its order.
+  List<RepoInfo> withAppRepoLast() => [
+        ...where((r) => !r.isAppRepo),
+        ...where((r) => r.isAppRepo),
+      ];
+}
+
 class RepoInfo {
   final String owner;
   final String name;
@@ -43,6 +56,9 @@ class RepoInfo {
   final String defaultBranch;
   final int stars;
   final String language;
+  final bool isPrivate;
+  final bool isFork;
+  final DateTime? updatedAt;
 
   RepoInfo({
     required this.owner,
@@ -52,6 +68,9 @@ class RepoInfo {
     required this.defaultBranch,
     required this.stars,
     required this.language,
+    this.isPrivate = false,
+    this.isFork = false,
+    this.updatedAt,
   });
 
   factory RepoInfo.fromJson(Map<String, dynamic> json) {
@@ -63,8 +82,13 @@ class RepoInfo {
       defaultBranch: json['default_branch'] ?? 'main',
       stars: json['stargazers_count'] ?? 0,
       language: json['language'] ?? '',
+      isPrivate: json['private'] ?? false,
+      isFork: json['fork'] ?? false,
+      updatedAt: DateTime.tryParse(json['pushed_at'] ?? json['updated_at'] ?? ''),
     );
   }
+
+  bool get isAppRepo => name.toLowerCase() == kAppRepoName;
 
   String get zipUrl =>
       'https://github.com/$fullName/archive/refs/heads/$defaultBranch.zip';

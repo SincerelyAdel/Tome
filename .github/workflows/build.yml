@@ -2,8 +2,11 @@ name: Build Flutter APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ccr-*']
   workflow_dispatch:
+
+permissions:
+  contents: write  # lets the job publish the APK as a GitHub Release
 
 jobs:
   build:
@@ -17,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -32,11 +35,40 @@ jobs:
           echo "flutter.versionName=1.0" >> android/local.properties
           echo "sdk.dir=$ANDROID_SDK_ROOT" >> android/local.properties
 
+      - name: Set up release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: APKs use a throwaway key and won't install as updates over earlier builds."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+          {
+            echo "storeFile=release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=repoviewer"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > android/key.properties
+
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build release APK
-        run: flutter build apk --release --split-per-abi --no-shrink
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APKs
+        run: |
+          # One APK that runs on any phone (easiest to install by hand)...
+          flutter build apk --release --no-shrink
+          mv build/app/outputs/flutter-apk/app-release.apk RepoViewer.apk
+          # ...plus smaller per-CPU APKs.
+          flutter build apk --release --split-per-abi --no-shrink
+          mv RepoViewer.apk build/app/outputs/flutter-apk/RepoViewer.apk
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
@@ -44,3 +76,18 @@ jobs:
           name: repoviewer-apk
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
+
+      # A release gives a direct .apk link that works on a phone without
+      # signing in: https://github.com/<owner>/<repo>/releases/latest
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: RepoViewer build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Built from `${{ github.ref_name }}` at ${{ github.sha }}.
+
+            **On a phone:** download `RepoViewer.apk` below and open it.
+          files: build/app/outputs/flutter-apk/*.apk

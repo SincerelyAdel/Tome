@@ -1,19 +1,30 @@
 # RepoViewer — GitHub Repository Viewer with Claude AI
 
-A Flutter tablet app for browsing GitHub repositories, downloading ZIPs, 
-and generating AI-powered lab reports via the Claude API.
+A Flutter tablet app for browsing GitHub repositories, downloading ZIPs,
+explaining files with Claude, and installing CI builds.
 
 ---
 
 ## Features
 
-- **Browse** any public GitHub repository with a file tree
+- **Repo grid** — your repos (incl. private, with a token) in a two-column grid, or any user's public repos; type a username to switch
+- **Two GitHub accounts** — swipe left/right on the home screen to switch between them
+- **Browse** any GitHub repository with a file tree, on any branch
+- **Repo tabs** — Code, Issues, Pull requests (with comments), Commits (with diffs) and Branches, like GitHub
 - **View** source files with syntax highlighting (Verilog, Dart, Python, etc.)
 - **Download ZIP** of the entire repository directly to your Downloads folder
-- **AI Explain** — tap "Explain" on any Verilog file for a concise Claude summary
-- **Generate Report** — select files and generate a full EQSemi lab report via Claude
+- **AI Explain** — tap "Explain" on any file for a concise Claude summary
+- **Actions** — see GitHub Actions runs, download a run's artifacts and install APKs straight from the app
 - **Two-pane tablet layout** — file tree on left, file content on right
-- **Dark GitHub theme** throughout
+- **Dark and light themes** — gold accent with a glowing gold screen border; toggle with the sun/moon button on the home screen
+
+---
+
+## Install on a phone
+
+Every successful CI build is published as a GitHub Release. Open
+**https://github.com/SincerelyAdel/repo-viewer/releases/latest**, download
+`RepoViewer.apk` and open it (allow "Install unknown apps" when asked).
 
 ---
 
@@ -49,11 +60,10 @@ Open **Settings** (gear icon) and enter:
 | Field | Description |
 |-------|-------------|
 | Claude API Key | Your `sk-ant-api03-...` key from console.anthropic.com |
-| GitHub Token | Optional `github_pat_...` for private repos or higher rate limits |
+| GitHub Account 1 | Optional `github_pat_...` for private repos, artifacts or higher rate limits |
+| GitHub Account 2 | Token for a second account; swipe on the home screen to switch |
 
-The Claude API key is required for:
-- File explanation (AI button in file viewer)
-- Report generation
+The Claude API key is required for file explanation (Explain button in the file viewer).
 
 For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 
@@ -61,14 +71,14 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 
 ## Usage
 
-1. Launch the app — it pre-fills with `https://github.com/SincerelyAdel/RTL`
-2. Tap **Open** to browse the repository
-3. Navigate folders, tap files to view them
-4. Tap **Download ZIP** in the toolbar to save the repo to Downloads
-5. Tap **Report** to open the AI report generator
-   - Select which Verilog files to include
-   - Enter a lab number (optional)
-   - Tap **Generate Report**
+1. Launch the app and add a GitHub token in Settings to list your repositories, or type any username to browse public ones
+2. Swipe left/right to switch GitHub accounts
+3. Tap a repo to browse it, or type a repo URL / `owner/repo` / username in the top box
+4. Navigate folders, tap files to view them
+5. Tap **Download ZIP** in the toolbar to save the repo to Downloads
+6. Tap **Actions** (▶ icon) to see CI runs; open a run and tap **Get** on an
+   artifact to download it, then **Install** on an APK. Downloading artifacts
+   needs a GitHub token in Settings (GitHub requires sign-in for artifacts).
 
 ---
 
@@ -77,21 +87,25 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 ```
 lib/
 ├── main.dart                    # App entry point
+├── theme.dart                   # Dark/light palettes + ThemeData
 ├── models/
-│   └── repo_item.dart           # RepoItem, RepoInfo data classes
+│   ├── repo_item.dart           # RepoItem, RepoInfo data classes
+│   └── actions.dart             # WorkflowRun, Artifact data classes
 ├── services/
 │   ├── github_service.dart      # GitHub API calls
 │   ├── claude_service.dart      # Anthropic Claude API
 │   ├── download_service.dart    # ZIP download with progress
-│   └── prefs_service.dart       # SharedPreferences (API keys, recent repos)
+│   ├── artifact_service.dart    # Actions artifact download, unzip, install
+│   └── prefs_service.dart       # SharedPreferences (keys, accounts, theme, recents)
 ├── screens/
-│   ├── home_screen.dart         # Repo URL input + recent repos
+│   ├── home_screen.dart         # Account pages (swipe), repo grid, input, recents
 │   ├── repo_browser_screen.dart # Two-pane file tree browser
 │   ├── file_viewer_screen.dart  # Syntax-highlighted file viewer
-│   ├── report_screen.dart       # Claude report generation
+│   ├── actions_screen.dart      # Actions runs + artifact download/install
 │   └── settings_screen.dart    # API keys configuration
 └── widgets/
-    └── file_icon.dart           # File type icons and helpers
+    ├── file_icon.dart           # File type icons and helpers
+    └── gold_glow_border.dart    # Gold glow around the screen edge
 ```
 
 ---
@@ -106,4 +120,4 @@ Claude **claude-sonnet-4-6** via the Anthropic API (`https://api.anthropic.com/v
 
 - Storage permission is requested on first ZIP download
 - API keys are stored locally using `shared_preferences` (never sent anywhere except their respective APIs)
-- The app works offline for browsing previously cached directory listings
+- Folders opened once load instantly for the rest of the session (in-memory cache, not offline)
