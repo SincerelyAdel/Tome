@@ -511,7 +511,7 @@ class _AccountPageState extends State<_AccountPage>
       // No builder chosen yet: adopt the user's own "apk-builder" repo.
       if (builderRepo.value.isEmpty && widget.owner == null) {
         for (final r in repos) {
-          if (r.name.toLowerCase() == 'apk-builder') {
+          if (r.name.toLowerCase() == kApkBuilderRepoName) {
             PrefsService.setBuilderRepo('${r.owner}/${r.name}');
             break;
           }
