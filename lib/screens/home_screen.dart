@@ -781,15 +781,8 @@ class _AccountPageState extends State<_AccountPage>
                       color: gold ? fg : AppColors.accent),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text.rich(
-                      TextSpan(children: [
-                        if (showOwner)
-                          TextSpan(
-                              text: '${r.owner} / ',
-                              style: TextStyle(
-                                  color: sub, fontWeight: FontWeight.w400)),
-                        TextSpan(text: r.name),
-                      ]),
+                    child: Text(
+                      r.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -801,6 +794,16 @@ class _AccountPageState extends State<_AccountPage>
                   if (r.isPrivate) _badge(Icons.lock_outline, 'Private', wide),
                   if (r.isFork) _badge(Icons.call_split, 'Fork', wide),
                 ]),
+                // Org repos: the owner gets its own line, so a long org name
+                // never pushes the repo name out of view.
+                if (showOwner)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 26, top: 2),
+                    child: Text(r.owner,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: sub, fontSize: wide ? 13 : 12)),
+                  ),
                 const SizedBox(height: 8),
                 // Loose fit: the meta line follows the text directly and any
                 // spare height goes to the bottom of the card.
