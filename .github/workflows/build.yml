@@ -49,7 +49,7 @@ jobs:
           {
             echo "storeFile=release.jks"
             echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyAlias=repoviewer"
+            echo "keyAlias=key"  # same key as apk-builder (apps.jks)
             echo "keyPassword=$KEYSTORE_PASSWORD"
           } > android/key.properties
 
