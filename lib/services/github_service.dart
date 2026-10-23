@@ -236,7 +236,8 @@ class GitHubService {
     if (response.statusCode == 200) {
       return (jsonDecode(response.body) as List<dynamic>)
           .map((e) => RepoInfo.fromJson(e))
-          .toList();
+          .toList()
+          .withAppRepoLast();
     }
     if (response.statusCode == 404) throw Exception('User not found');
     if (response.statusCode == 401) {

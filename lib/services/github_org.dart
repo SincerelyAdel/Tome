@@ -52,7 +52,7 @@ extension GitHubOrg on GitHubService {
     final repos = list.map((e) => RepoInfo.fromJson(e)).toList();
     repos.sort((a, b) => (b.updatedAt ?? DateTime(0))
         .compareTo(a.updatedAt ?? DateTime(0)));
-    return repos;
+    return repos.withAppRepoLast();
   }
 
   Future<List<GhMember>> getOrgMembers(String org) async {
