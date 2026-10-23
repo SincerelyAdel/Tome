@@ -35,9 +35,10 @@ class RepoItem {
   }
 }
 
-/// The repo that builds this app's APK. Its CI pushes constantly, so in a
-/// "recently pushed" list it would always sit on top; it's kept last instead.
-const kAppRepoName = 'repo-viewer';
+/// The repo that builds APKs for your other repos (see
+/// github.com/SincerelyAdel/apk-builder). It's tooling rather than an app,
+/// so repo lists always show it last.
+const kApkBuilderRepoName = 'apk-builder';
 
 extension AppRepoLast on List<RepoInfo> {
   /// The same repos with the APK builder repo (any owner, forks too) moved
@@ -88,7 +89,7 @@ class RepoInfo {
     );
   }
 
-  bool get isAppRepo => name.toLowerCase() == kAppRepoName;
+  bool get isAppRepo => name.toLowerCase() == kApkBuilderRepoName;
 
   String get zipUrl =>
       'https://github.com/$fullName/archive/refs/heads/$defaultBranch.zip';

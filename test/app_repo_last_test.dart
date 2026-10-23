@@ -13,16 +13,21 @@ RepoInfo repo(String name) => RepoInfo(
 
 void main() {
   test('the APK builder repo goes last, others keep their order', () {
-    final sorted = [repo('repo-viewer'), repo('b'), repo('a'), repo('c')]
+    final sorted = [repo('apk-builder'), repo('b'), repo('a'), repo('c')]
         .withAppRepoLast()
         .map((r) => r.name)
         .toList();
-    expect(sorted, ['b', 'a', 'c', 'repo-viewer']);
+    expect(sorted, ['b', 'a', 'c', 'apk-builder']);
+  });
+
+  test('repo-viewer itself is not pinned', () {
+    expect([repo('repo-viewer'), repo('x')].withAppRepoLast().first.name,
+        'repo-viewer');
   });
 
   test('matches any capitalisation, leaves lists without it alone', () {
-    expect([repo('Repo-Viewer'), repo('x')].withAppRepoLast().last.name,
-        'Repo-Viewer');
+    expect([repo('APK-Builder'), repo('x')].withAppRepoLast().last.name,
+        'APK-Builder');
     expect([repo('x'), repo('y')].withAppRepoLast().map((r) => r.name),
         ['x', 'y']);
   });
