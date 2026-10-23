@@ -5,7 +5,8 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-// Release signing key, written by CI from repo secrets (see build.yml).
+// Release signing key for local builds: android/key.properties (not in git)
+// points at the shared apps.jks that apk-builder also signs with.
 // A fixed key lets each new APK install as an update over the last one.
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file("key.properties")
@@ -48,7 +49,7 @@ android {
 
     buildTypes {
         release {
-            // Without key.properties (local builds, or no CI secret yet) fall
+            // Without key.properties fall
             // back to the debug key so `flutter build apk --release` still works.
             signingConfig = keystorePropertiesFile.exists()
                     ? signingConfigs.release
