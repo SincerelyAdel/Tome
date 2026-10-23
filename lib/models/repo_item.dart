@@ -35,6 +35,20 @@ class RepoItem {
   }
 }
 
+/// The repo that builds APKs for your other repos (see
+/// github.com/SincerelyAdel/apk-builder). It's tooling rather than an app,
+/// so repo lists always show it last.
+const kApkBuilderRepoName = 'apk-builder';
+
+extension AppRepoLast on List<RepoInfo> {
+  /// The same repos with the APK builder repo (any owner, forks too) moved
+  /// to the end. Everything else keeps its order.
+  List<RepoInfo> withAppRepoLast() => [
+        ...where((r) => !r.isAppRepo),
+        ...where((r) => r.isAppRepo),
+      ];
+}
+
 class RepoInfo {
   final String owner;
   final String name;
@@ -74,6 +88,8 @@ class RepoInfo {
       updatedAt: DateTime.tryParse(json['pushed_at'] ?? json['updated_at'] ?? ''),
     );
   }
+
+  bool get isAppRepo => name.toLowerCase() == kApkBuilderRepoName;
 
   String get zipUrl =>
       'https://github.com/$fullName/archive/refs/heads/$defaultBranch.zip';

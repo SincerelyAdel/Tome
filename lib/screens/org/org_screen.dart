@@ -12,11 +12,12 @@ import '../../widgets/loader.dart';
 import '../actions_screen.dart';
 import '../repo_browser_screen.dart';
 import '../repo_tabs/issue_detail_screen.dart';
+import 'leaderboard_tab.dart';
 import 'org_admin_tabs.dart';
 import 'project_board_screen.dart';
 
 /// An organization, like its page on github.com plus the owner's views:
-/// Overview, Repositories, Inbox, Actions, Projects, People, Teams,
+/// Overview, Leaderboard, Repositories, Inbox, Actions, Projects, People, Teams,
 /// Security and Settings (secrets, variables, billing, audit log).
 class OrgScreen extends StatefulWidget {
   const OrgScreen({super.key, required this.profile, required this.github});
@@ -31,6 +32,7 @@ class OrgScreen extends StatefulWidget {
 class _OrgScreenState extends State<OrgScreen> {
   static const _tabs = [
     (Icons.menu_book_outlined, 'Overview'),
+    (Icons.emoji_events_outlined, 'Leaderboard'),
     (Icons.book_outlined, 'Repositories'),
     (Icons.inbox_outlined, 'Inbox'),
     (Icons.play_circle_outline, 'Actions'),
@@ -74,14 +76,15 @@ class _OrgScreenState extends State<OrgScreen> {
         Expanded(
           child: IndexedStack(index: _tab, children: [
             tab(0, () => _OverviewTab(profile: p, github: gh)),
-            tab(1, () => _ReposTab(org: _org, github: gh)),
-            tab(2, () => _InboxTab(org: _org, github: gh)),
-            tab(3, () => _ActionsTab(org: _org, github: gh)),
-            tab(4, () => _ProjectsTab(org: _org, github: gh)),
-            tab(5, () => PeopleTab(org: _org, github: gh, isOwner: _role == 'admin')),
-            tab(6, () => TeamsTab(org: _org, github: gh)),
-            tab(7, () => SecurityTab(org: _org, github: gh)),
-            tab(8, () => SettingsTab(org: _org, github: gh)),
+            tab(1, () => LeaderboardTab(org: _org, github: gh)),
+            tab(2, () => _ReposTab(org: _org, github: gh)),
+            tab(3, () => _InboxTab(org: _org, github: gh)),
+            tab(4, () => _ActionsTab(org: _org, github: gh)),
+            tab(5, () => _ProjectsTab(org: _org, github: gh)),
+            tab(6, () => PeopleTab(org: _org, github: gh, isOwner: _role == 'admin')),
+            tab(7, () => TeamsTab(org: _org, github: gh)),
+            tab(8, () => SecurityTab(org: _org, github: gh)),
+            tab(9, () => SettingsTab(org: _org, github: gh)),
           ]),
         ),
       ]),

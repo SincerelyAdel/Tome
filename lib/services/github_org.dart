@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/actions.dart';
 import '../models/github_models.dart';
+import '../models/leaderboard.dart';
 import '../models/org_models.dart';
 import '../models/repo_item.dart';
 import 'github_service.dart';
@@ -54,7 +55,7 @@ extension GitHubOrg on GitHubService {
     final repos = list.map((e) => RepoInfo.fromJson(e)).toList();
     repos.sort((a, b) => (b.updatedAt ?? DateTime(0))
         .compareTo(a.updatedAt ?? DateTime(0)));
-    return repos;
+    return repos.withAppRepoLast();
   }
 
   Future<List<GhMember>> getOrgMembers(String org) async {
@@ -139,6 +140,45 @@ extension GitHubOrg on GitHubService {
     final all = results.expand((x) => x).toList();
     all.sort((a, b) => b.$2.createdAt.compareTo(a.$2.createdAt));
     return all.take(80).toList();
+  }
+
+  // --------------------------------------------------------- leaderboard
+
+  /// Weekly commit stats for the org's most recently pushed repos (forks
+  /// left out, since their history is mostly upstream's). GitHub computes
+  /// these on demand and answers 202 until they're ready, so each repo is
+  /// asked a few times; any still not ready are listed in pendingRepos.
+  Future<OrgCommitStats> getOrgCommitStats(String org,
+      {int repoCount = 30}) async {
+    final repos = (await getOrgRepos(org))
+        .where((r) => !r.isFork)
+        .take(repoCount)
+        .toList();
+    final pending = <String>[];
+    final results = await Future.wait(repos.map((r) async {
+      for (var attempt = 0; attempt < 4; attempt++) {
+        if (attempt > 0) await Future.delayed(const Duration(seconds: 2));
+        final data = await api(
+            '/repos/${_e(r.owner)}/${_e(r.name)}/stats/contributors');
+        if (data is List) {
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map((e) => RepoContributor.fromJson(r.name, e))
+              .whereType<RepoContributor>()
+              .toList();
+        }
+        // 204 (no body): an empty repo, nothing to count. Anything else is
+        // GitHub's 202 "still counting", so ask again.
+        if (data == null) return <RepoContributor>[];
+      }
+      pending.add(r.name);
+      return <RepoContributor>[];
+    }).map((f) => f.catchError((_) => <RepoContributor>[])));
+    return OrgCommitStats(
+      contributors: results.expand((x) => x).toList(),
+      repoCount: repos.length,
+      pendingRepos: pending,
+    );
   }
 
   // ------------------------------------------------------------ security
