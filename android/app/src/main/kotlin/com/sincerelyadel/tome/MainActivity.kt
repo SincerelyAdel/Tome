@@ -1,4 +1,4 @@
-package com.example.repoviewer
+package com.sincerelyadel.tome
 
 import android.content.ClipData
 import android.content.Intent
@@ -12,7 +12,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Opens Android's share sheet (Quick Share, Bluetooth, ...) for a file.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "repoviewer/share")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "tome/share")
             .setMethodCallHandler { call, result ->
                 if (call.method != "shareFile") {
                     result.notImplemented()

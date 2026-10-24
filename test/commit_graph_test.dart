@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/models/github_models.dart';
-import 'package:repoviewer/widgets/commit_graph.dart';
+import 'package:tome/models/github_models.dart';
+import 'package:tome/widgets/commit_graph.dart';
 
 GhCommit c(String sha, List<String> parents) =>
     GhCommit(sha: sha, message: sha, authorName: '', parents: parents);

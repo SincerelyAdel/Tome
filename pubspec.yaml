@@ -1,4 +1,4 @@
-name: repoviewer
+name: tome
 description: GitHub Repository Viewer with Claude AI integration
 
 publish_to: 'none'

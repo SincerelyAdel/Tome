@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/models/actions.dart';
-import 'package:repoviewer/services/artifact_service.dart';
+import 'package:tome/models/actions.dart';
+import 'package:tome/services/artifact_service.dart';
 
 void main() {
   test('parses a workflow run', () {
@@ -31,18 +31,18 @@ void main() {
   test('parses an artifact', () {
     final a = Artifact.fromJson({
       'id': 12329419632,
-      'name': 'repoviewer-apk',
+      'name': 'tome-apk',
       'size_in_bytes': 33277700,
       'expired': false,
       'expires_at': '2026-11-20T08:00:18Z',
     });
-    expect(a.name, 'repoviewer-apk');
+    expect(a.name, 'tome-apk');
     expect(a.expired, isFalse);
   });
 
   test('detects APKs and treats universal APKs as matching', () {
     expect(ArtifactService.isApk('app-arm64-v8a-release.APK'), isTrue);
     expect(ArtifactService.isApk('notes.txt'), isFalse);
-    expect(ArtifactService.matchesDevice('RepoViewer.apk'), isTrue);
+    expect(ArtifactService.matchesDevice('Tome.apk'), isTrue);
   });
 }

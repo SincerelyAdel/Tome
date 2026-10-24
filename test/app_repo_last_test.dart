@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/models/repo_item.dart';
+import 'package:tome/models/repo_item.dart';
 
 RepoInfo repo(String name) => RepoInfo(
       owner: 'me',
@@ -20,9 +20,9 @@ void main() {
     expect(sorted, ['b', 'a', 'c', 'apk-builder']);
   });
 
-  test('repo-viewer itself is not pinned', () {
-    expect([repo('repo-viewer'), repo('x')].withAppRepoLast().first.name,
-        'repo-viewer');
+  test('Tome itself is not pinned', () {
+    expect([repo('Tome'), repo('x')].withAppRepoLast().first.name,
+        'Tome');
   });
 
   test('matches any capitalisation, leaves lists without it alone', () {

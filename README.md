@@ -1,4 +1,4 @@
-# RepoViewer — GitHub Repository Viewer with Claude AI
+# Tome — GitHub Repository Viewer with Claude AI
 
 A Flutter tablet app for browsing GitHub repositories, downloading ZIPs,
 explaining files with Claude, and installing CI builds.
@@ -16,15 +16,19 @@ explaining files with Claude, and installing CI builds.
 - **AI Explain** — tap "Explain" on any file for a concise Claude summary
 - **Actions** — see GitHub Actions runs, download a run's artifacts and install APKs straight from the app
 - **Two-pane tablet layout** — file tree on left, file content on right
-- **Dark and light themes** — gold accent with a glowing gold screen border; toggle with the sun/moon button on the home screen
+- **Dark and light themes** — gold accent with a glowing screen border that runs from gold into the icon's teal; toggle with the sun/moon button on the home screen
 
 ---
 
 ## Install on a phone
 
 Every successful CI build is published as a GitHub Release. Open
-**https://github.com/SincerelyAdel/repo-viewer/releases/latest**, download
-`RepoViewer.apk` and open it (allow "Install unknown apps" when asked).
+**https://github.com/SincerelyAdel/Tome/releases/latest**, download
+`Tome.apk` and open it (allow "Install unknown apps" when asked).
+
+The app ID is `com.sincerelyadel.tome`. Builds from before the rename used a
+different ID, so Android installs Tome as a separate app: uninstall the old one
+and enter your tokens again in Settings.
 
 ---
 
@@ -87,7 +91,7 @@ For public repos like `SincerelyAdel/RTL`, no GitHub token is needed.
 ```
 lib/
 ├── main.dart                    # App entry point
-├── theme.dart                   # Dark/light palettes + ThemeData
+├── theme.dart                   # Dark/light palettes (gold + teal) + ThemeData
 ├── models/
 │   ├── repo_item.dart           # RepoItem, RepoInfo data classes
 │   └── actions.dart             # WorkflowRun, Artifact data classes
@@ -105,8 +109,18 @@ lib/
 │   └── settings_screen.dart    # API keys configuration
 └── widgets/
     ├── file_icon.dart           # File type icons and helpers
-    └── gold_glow_border.dart    # Gold glow around the screen edge
+    └── gold_glow_border.dart    # Gold-to-teal glow around the screen edge
 ```
+
+---
+
+## App icon
+
+The icon is generated, not hand-drawn, in the same brush style as Scry's.
+`tools/icon/tome_icon.py` paints an open book from many separate gold and teal
+brush strokes, with three painted stars rising out of it (seed 7), and
+`tools/icon/render_icons.py` renders it with headless Chrome into the Android
+`mipmap-*` folders. See [tools/icon/README.md](tools/icon/README.md).
 
 ---
 

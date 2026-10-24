@@ -80,7 +80,7 @@ class _ApksScreenState extends State<ApksScreen> {
               'Build APKs on demand from one builder repo, so your app repos '
               'spend no Actions minutes on pushes.\n\n'
               '1. Create a repo and copy tools/apk-builder/.github/workflows/'
-              'build-apk.yml from the RepoViewer repo into it.\n'
+              'build-apk.yml from the Tome repo into it.\n'
               '2. Add its secrets (see tools/apk-builder/README.md).\n'
               '3. Enter it in Settings under "APK builder repo".',
               style: TextStyle(color: AppColors.muted, height: 1.45)),
@@ -268,7 +268,7 @@ class _ApksScreenState extends State<ApksScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       duration: const Duration(seconds: 6),
       content: Text(result.type == ResultType.permissionDenied
-          ? 'Allow RepoViewer to install apps: Settings → Apps → RepoViewer → '
+          ? 'Allow Tome to install apps: Settings → Apps → Tome → '
               'Install unknown apps'
           : 'Could not open file: ${result.message}'),
     ));
@@ -496,7 +496,7 @@ class _ApksScreenState extends State<ApksScreen> {
       ..sort((x, y) => newest(y.value).compareTo(newest(x.value)));
   }
 
-  /// One build ("repo-viewer:14"): a collapsed row that opens to its APKs.
+  /// One build ("Tome:14"): a collapsed row that opens to its APKs.
   Widget _buildSection(String key, List<ApkEntry> apks, bool searching) {
     final open = searching || _openBuilds.contains(key);
     final first = apks.first;

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/services/github_service.dart';
+import 'package:tome/services/github_service.dart';
 
 void main() {
   test('repo inputs parse as repos', () {

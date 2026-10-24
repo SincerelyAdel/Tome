@@ -209,8 +209,8 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Soft gold light behind the glass, so the frost has something
-          // to blur.
+          // Soft gold and teal light behind the glass, so the frost has
+          // something to blur.
           ClipRRect(
             borderRadius: radius,
             child: Stack(children: [
@@ -223,7 +223,7 @@ class _FileViewerScreenState extends State<FileViewerScreen> {
                   right: -140,
                   bottom: -120,
                   size: 560,
-                  color: AppColors.accentLight.withOpacity(dark ? 0.22 : 0.30)),
+                  color: AppColors.teal.withOpacity(dark ? 0.22 : 0.26)),
               _glow(
                   right: 180,
                   top: 120,

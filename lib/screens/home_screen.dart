@@ -856,7 +856,7 @@ class _AccountPageState extends State<_AccountPage>
       children: [
         Icon(Icons.person_add_alt_1_outlined, size: 56, color: AppColors.faint),
         const SizedBox(height: 16),
-        Text(widget.index == 0 ? 'Welcome to RepoViewer' : 'Account 2',
+        Text(widget.index == 0 ? 'Welcome to Tome' : 'Account 2',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontFamily: kSerif,

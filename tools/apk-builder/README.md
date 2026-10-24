@@ -34,7 +34,7 @@ is older than the latest Flutter accepts.
 
    Keep `apps.jks` somewhere safe: losing it means the next build can't
    update the installed apps.
-3. In RepoViewer, go to **Settings** and enter the builder repo as
+3. In Tome, go to **Settings** and enter the builder repo as
    `owner/apk-builder`.
 4. Open the **APKs** page and tap **Build APK**, then pick a repo.
    The APKs show up on the same page when the build finishes.

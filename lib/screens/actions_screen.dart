@@ -190,8 +190,15 @@ class _ActionsScreenState extends State<ActionsScreen> {
 
   Widget _goldBar() => Container(
         decoration: BoxDecoration(
+          // Gold running into the icon's teal.
           gradient: LinearGradient(
-            colors: [AppColors.button, AppColors.accentLight, AppColors.accent],
+            colors: [
+              AppColors.button,
+              AppColors.accentLight,
+              AppColors.accent,
+              AppColors.teal,
+              AppColors.tealLight,
+            ],
           ),
         ),
       );
@@ -750,7 +757,7 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
     final result = await _service.open(file);
     if (!mounted || result.type == ResultType.done) return;
     final msg = result.type == ResultType.permissionDenied
-        ? 'Allow RepoViewer to install apps: Settings → Apps → RepoViewer → '
+        ? 'Allow Tome to install apps: Settings → Apps → Tome → '
             'Install unknown apps'
         : 'Could not open file: ${result.message}';
     ScaffoldMessenger.of(context).showSnackBar(

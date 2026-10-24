@@ -1,6 +1,6 @@
 import 'package:highlight/languages/all.dart' show allLanguages;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/widgets/file_icon.dart';
+import 'package:tome/widgets/file_icon.dart';
 
 void main() {
   test('files map to the expected languages', () {

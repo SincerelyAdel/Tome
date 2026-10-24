@@ -19,7 +19,7 @@ Future<void> main() async {
   _hideSystemBars();
   AppTheme.set(await PrefsService.getDarkMode());
   builderRepo.value = await PrefsService.getBuilderRepo();
-  runApp(const RepoViewerApp());
+  runApp(const TomeApp());
 }
 
 /// Full screen: status bar and navigation bar stay hidden. Swiping in from
@@ -28,14 +28,14 @@ void _hideSystemBars() {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 }
 
-class RepoViewerApp extends StatefulWidget {
-  const RepoViewerApp({super.key});
+class TomeApp extends StatefulWidget {
+  const TomeApp({super.key});
 
   @override
-  State<RepoViewerApp> createState() => _RepoViewerAppState();
+  State<TomeApp> createState() => _TomeAppState();
 }
 
-class _RepoViewerAppState extends State<RepoViewerApp>
+class _TomeAppState extends State<TomeApp>
     with WidgetsBindingObserver {
   @override
   void initState() {
@@ -72,7 +72,7 @@ class _RepoViewerAppState extends State<RepoViewerApp>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RepoViewer',
+      title: 'Tome',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       themeAnimationDuration: Duration.zero,

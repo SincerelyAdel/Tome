@@ -22,6 +22,8 @@ class AppPalette {
     required this.warningBg,
     required this.danger,
     required this.folder,
+    required this.teal,
+    required this.tealLight,
   });
 
   final bool isDark;
@@ -32,6 +34,28 @@ class AppPalette {
   /// Fill and text of solid buttons and selected chips: a lighter gold.
   final Color button, onButton;
   final Color success, warning, warningBg, danger, folder;
+
+  /// The teal from the app icon, mixed into the gold glows and edges.
+  final Color teal, tealLight;
+
+  /// Gold running into the icon's teal, for edges and glows.
+  LinearGradient goldTeal({
+    double alpha = 1,
+    AlignmentGeometry begin = Alignment.topLeft,
+    AlignmentGeometry end = Alignment.bottomRight,
+  }) =>
+      LinearGradient(
+        begin: begin,
+        end: end,
+        colors: [
+          accentLight.withOpacity(alpha),
+          accent.withOpacity(alpha),
+          teal.withOpacity(alpha),
+          tealLight.withOpacity(alpha),
+        ],
+        // On light pages gold is the weaker of the two; give teal more room.
+        stops: isDark ? const [0, 0.35, 0.75, 1] : const [0, 0.25, 0.6, 1],
+      );
 }
 
 const darkPalette = AppPalette(
@@ -53,6 +77,8 @@ const darkPalette = AppPalette(
   warningBg: Color(0x29D9822B),
   danger: Color(0xFFE5675A),
   folder: Color(0xFFB8963E),
+  teal: Color(0xFF1F9E8F),
+  tealLight: Color(0xFF2BB3A2),
 );
 
 const lightPalette = AppPalette(
@@ -74,6 +100,9 @@ const lightPalette = AppPalette(
   warningBg: Color(0x1FB8641C),
   danger: Color(0xFFB8432F),
   folder: Color(0xFFC08A2E),
+  // Deeper than the icon's teal, so it shows on cream.
+  teal: Color(0xFF0F7F73),
+  tealLight: Color(0xFF16A594),
 );
 
 /// The current colors. Screens read these directly; switching theme swaps
@@ -101,6 +130,10 @@ class AppColors {
   static Color get warningBg => _p.warningBg;
   static Color get danger => _p.danger;
   static Color get folder => _p.folder;
+  static Color get teal => _p.teal;
+  static Color get tealLight => _p.tealLight;
+  static LinearGradient goldTeal({double alpha = 1}) =>
+      _p.goldTeal(alpha: alpha);
 }
 
 /// Holds dark/light mode. Listen to it to rebuild on change.
@@ -129,6 +162,8 @@ ThemeData buildAppTheme() {
     onPrimary: c.onAccent,
     secondary: c.accentLight,
     onSecondary: c.onAccent,
+    tertiary: c.teal,
+    onTertiary: Colors.white,
     surface: c.bg,
     onSurface: c.text,
     surfaceContainerHighest: c.surface,

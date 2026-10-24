@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-/// Draws a soft gold glow around the edge of the screen, on top of [child].
+/// Draws a soft glow around the edge of the screen, gold running into the
+/// app icon's teal, on top of [child].
 /// It ignores touches, so the app underneath works as normal.
 class GoldGlowBorder extends StatelessWidget {
   const GoldGlowBorder({super.key, required this.child});
@@ -39,23 +40,33 @@ class _GlowPainter extends CustomPainter {
     canvas.clipRect(rect);
     final strength = isDark ? 0.8 : 0.7;
 
-    // Wide haze in the main gold.
+    // Gold at the top left and bottom right, teal in the other corners.
+    // On light pages the teal keeps its full strength, so it still shows.
+    final tealStrength = isDark ? 1.0 : 1.15;
+    Shader sweep(Color gold, Color teal, double alpha) {
+      final g = gold.withOpacity(alpha);
+      final t = teal.withOpacity((alpha / strength * tealStrength).clamp(0.0, 1.0));
+      return SweepGradient(colors: [g, t, g, t, g]).createShader(rect);
+    }
+
+    // Wide haze: main gold and teal.
     canvas.drawRect(
       rect,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 18
-        ..color = AppColors.accent.withOpacity(0.55 * strength)
+        ..shader = sweep(AppColors.accent, AppColors.teal, 0.55 * strength)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
     );
 
-    // Softer, brighter core in the lighter gold.
+    // Softer, brighter core in the lighter gold and teal.
     canvas.drawRect(
       rect,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 6
-        ..color = AppColors.accentLight.withOpacity(0.45 * strength)
+        ..shader =
+            sweep(AppColors.accentLight, AppColors.tealLight, 0.45 * strength)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
   }

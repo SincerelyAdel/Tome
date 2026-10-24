@@ -47,7 +47,7 @@ class ApkEntry {
 
   /// The build this APK belongs to (one release, one artifact, the files
   /// in the code, or one download folder), its title like
-  /// "repo-viewer:14", and a line about it.
+  /// "Tome:14", and a line about it.
   final String group, groupTitle, groupDetail;
 
   /// For APKs made by the builder repo: the repo they were built from
@@ -77,7 +77,7 @@ class ApkLibrary {
 
   static final _apkArtifact = RegExp(r'apk|android', caseSensitive: false);
 
-  /// "build-14", "v1.2.0" or "RepoViewer build 14" -> "14" / "1.2.0".
+  /// "build-14", "v1.2.0" or "Tome build 14" -> "14" / "1.2.0".
   static String _buildNo(String tag, String name) {
     for (final t in [tag, name]) {
       final m = RegExp(r'(\d+(?:\.\d+)*)\D*$').firstMatch(t);

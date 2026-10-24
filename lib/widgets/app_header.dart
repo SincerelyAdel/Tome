@@ -6,7 +6,7 @@ import '../services/github_service.dart';
 import '../services/prefs_service.dart';
 import '../theme.dart';
 
-/// The RepoViewer bar fixed at the top of every page: the app name (tap it
+/// The Tome bar fixed at the top of every page: the app name (tap it
 /// to go home), APKs, light/dark toggle and Settings. It sits above the navigator, so it never
 /// scrolls away or slides out with a page.
 class AppHeader extends StatefulWidget {
@@ -76,9 +76,15 @@ class _AppHeaderState extends State<AppHeader> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.auto_awesome, color: AppColors.accent, size: 22),
+                  // Gold into the icon's teal.
+                  ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) =>
+                        AppColors.goldTeal().createShader(bounds),
+                    child: const Icon(Icons.auto_awesome, size: 22),
+                  ),
                   const SizedBox(width: 10),
-                  Text('RepoViewer',
+                  Text('Tome',
                       style: TextStyle(
                           fontFamily: kSerif,
                           color: AppColors.text,

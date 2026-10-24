@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:repoviewer/models/leaderboard.dart';
-import 'package:repoviewer/screens/org/leaderboard_tab.dart';
+import 'package:tome/models/leaderboard.dart';
+import 'package:tome/screens/org/leaderboard_tab.dart';
 
 final now = DateTime.utc(2026, 10, 23);
 

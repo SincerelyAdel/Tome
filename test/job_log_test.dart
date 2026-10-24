@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:repoviewer/models/actions.dart';
-import 'package:repoviewer/widgets/gh_markdown.dart';
-import 'package:repoviewer/widgets/job_log.dart';
+import 'package:tome/models/actions.dart';
+import 'package:tome/widgets/gh_markdown.dart';
+import 'package:tome/widgets/job_log.dart';
 
 JobStep step(int n, String name, String start, {String? conclusion}) =>
     JobStep(

@@ -123,7 +123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             _hint('A repo with the build-apk.yml workflow (see tools/apk-builder '
-                'in the RepoViewer repo). The APKs page then gets a Build APK '
+                'in the Tome repo). The APKs page then gets a Build APK '
                 'button that builds any of your repos on demand.'),
             const SizedBox(height: 36),
             SizedBox(

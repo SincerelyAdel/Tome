@@ -8,7 +8,7 @@ import 'package:flutter/widgets.dart';
 class ShareService {
   ShareService._();
 
-  static const _channel = MethodChannel('repoviewer/share');
+  static const _channel = MethodChannel('tome/share');
 
   /// Android's own rule: 600dp or more on the short side is a tablet.
   static bool isTablet(BuildContext context) =>

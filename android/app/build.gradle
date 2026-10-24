@@ -15,7 +15,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.repoviewer"
+    namespace = "com.sincerelyadel.tome"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.repoviewer"
+        applicationId = "com.sincerelyadel.tome"
         minSdk = 21
         targetSdk = 34
         versionCode = flutter.versionCode

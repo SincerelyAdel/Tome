@@ -1,7 +1,7 @@
 name: Build APK
 
 # Builds an Android app (Flutter or Gradle) from another repo, only when
-# asked: from RepoViewer's "Build APK" button or this repo's Actions tab.
+# asked: from Tome's "Build APK" button or this repo's Actions tab.
 # Nothing runs on push, so your source repos spend no Actions minutes.
 on:
   workflow_dispatch:
@@ -163,7 +163,7 @@ jobs:
           rm -f aligned.apk key.jks out/*.idsig
           ls -lh out
 
-      # RepoViewer's APKs page lists this release under the source repo,
+      # Tome's APKs page lists this release under the source repo,
       # titled "<name>:<run number>".
       - name: Publish a release
         uses: softprops/action-gh-release@v2
