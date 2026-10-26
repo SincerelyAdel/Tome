@@ -64,6 +64,18 @@ class GitHubService {
     throw Exception('Failed to load file: ${response.statusCode}');
   }
 
+  /// A file's raw bytes. Unlike [getFileContent], this works for files over
+  /// 1 MB (the JSON contents API stops there; raw goes to 100 MB).
+  Future<List<int>> getRawFile(String owner, String repo, String path,
+      {String? ref}) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path${_refQuery(ref)}'),
+      headers: {..._headers, 'Accept': 'application/vnd.github.raw'},
+    );
+    if (response.statusCode == 200) return response.bodyBytes;
+    throw Exception('Failed to load $path: ${response.statusCode}');
+  }
+
   /// Repos the token's owner can access (own, collaborator, org),
   /// most recently pushed first. Includes private repos.
   Future<List<RepoInfo>> getMyRepos() async {

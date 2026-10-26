@@ -3,6 +3,10 @@ import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../models/repo_item.dart';
+import 'github_service.dart';
 
 /// Hands uvm-debugger runs from Actions artifacts to the UVM viewer app.
 ///
@@ -46,8 +50,19 @@ class UvmRuns {
       dir.uri.pathSegments.where((s) => s.isNotEmpty).last;
 
   /// A one-line summary from run.json: test, seed and how it ended.
-  static String summary(Directory dir) {
-    final m = _manifest(dir);
+  static String summary(Directory dir) => summaryOf(_manifest(dir));
+
+  /// The same summary from run.json's text, or '' when it isn't valid.
+  static String summaryOfText(String runJson) {
+    try {
+      final j = jsonDecode(runJson);
+      return j is Map<String, dynamic> ? summaryOf(j) : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static String summaryOf(Map<String, dynamic> m) {
     return [
       if (m['test'] != null) '${m['test']}',
       if (m['seed'] != null) 'seed ${m['seed']}',
@@ -64,6 +79,30 @@ class UvmRuns {
     } catch (_) {
       return const {};
     }
+  }
+
+  /// True when a repo folder listing is a run: it holds a run.json.
+  static bool isRunFolder(List<RepoItem> items) =>
+      items.any((i) => i.isFile && i.name == 'run.json');
+
+  /// Downloads a run folder committed to a repo (e.g. `runs/<run_id>/` on
+  /// the `uvmdbg-runs` branch) into the app's storage, ready for [open].
+  /// Only the folder's files are fetched; subfolders are ignored.
+  static Future<Directory> fetchFromRepo(GitHubService github, String owner,
+      String repo, String path, List<RepoItem> items,
+      {String? ref}) async {
+    final base = await getTemporaryDirectory();
+    final key = '$owner/$repo/${ref ?? ''}/$path'
+        .replaceAll(RegExp(r'[^\w.-]'), '_');
+    final dir = Directory('${base.path}/uvm_repo_runs/$key');
+    if (await dir.exists()) await dir.delete(recursive: true);
+    await dir.create(recursive: true);
+    for (final item in items.where((i) => i.isFile)) {
+      final bytes =
+          await github.getRawFile(owner, repo, item.path, ref: ref);
+      await File('${dir.path}/${item.name}').writeAsBytes(bytes);
+    }
+    return dir;
   }
 
   /// Zips one run folder (its files at the zip root) next to it.

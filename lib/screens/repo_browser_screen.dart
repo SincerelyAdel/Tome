@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../models/repo_item.dart';
+import '../services/uvm_runs.dart';
 import '../services/github_service.dart';
 import '../services/download_service.dart';
 import '../services/prefs_service.dart';
@@ -81,13 +84,99 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
       setState(() {
         _currentItems = items;
         _loading = false;
+        _runSummary = null;
       });
+      if (UvmRuns.isRunFolder(items)) _loadRunSummary(path);
     } catch (e) {
       setState(() {
         _error = e.toString();
         _loading = false;
       });
     }
+  }
+
+  // ------------------------------------------------------- uvm-debugger run
+
+  /// run.json's test · seed · status for the folder on screen, if it's a run.
+  String? _runSummary;
+  bool _openingRun = false;
+
+  Future<void> _loadRunSummary(String path) async {
+    try {
+      final bytes = await _github.getRawFile(widget.owner, widget.repo,
+          path.isEmpty ? 'run.json' : '$path/run.json',
+          ref: _branch);
+      final s = UvmRuns.summaryOfText(utf8.decode(bytes, allowMalformed: true));
+      if (mounted && _currentPath == path) setState(() => _runSummary = s);
+    } catch (_) {
+      // The banner still works without a summary.
+    }
+  }
+
+  Future<void> _openRun() async {
+    final path = _currentPath;
+    setState(() => _openingRun = true);
+    try {
+      final dir = await UvmRuns.fetchFromRepo(
+          _github, widget.owner, widget.repo, path, _currentItems,
+          ref: _branch);
+      await UvmRuns.open(dir, {
+        'repo': '${widget.owner}/${widget.repo}',
+        'branch': _branch ?? _defaultBranch ?? '',
+        'path': path,
+      });
+    } catch (e) {
+      _showSnack(e is UvmViewerMissing ? '$e' : 'Could not open the run: $e');
+    } finally {
+      if (mounted) setState(() => _openingRun = false);
+    }
+  }
+
+  /// Shown above a folder that holds a run.json.
+  Widget _runBanner() {
+    final name = _pathStack.isEmpty ? widget.repo : _pathStack.last;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.6)),
+      ),
+      child: Row(children: [
+        Icon(Icons.auto_awesome, color: AppColors.accent, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: AppColors.text,
+                    fontFamily: 'monospace',
+                    fontSize: 13)),
+            Text(
+                (_runSummary ?? '').isEmpty
+                    ? 'UVM run'
+                    : 'UVM run · $_runSummary',
+                style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        _openingRun
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 3))
+            : FilledButton.icon(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.button,
+                    foregroundColor: AppColors.onButton),
+                onPressed: _openRun,
+                icon: const Icon(Icons.play_arrow, size: 18),
+                label: const Text('Open in ${UvmRuns.viewerName}'),
+              ),
+      ]),
+    );
   }
 
   void _navigateTo(RepoItem item) {
@@ -457,6 +546,12 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
       );
     }
 
+    final list = _fileList();
+    if (!UvmRuns.isRunFolder(_currentItems)) return list;
+    return Column(children: [_runBanner(), Expanded(child: list)]);
+  }
+
+  Widget _fileList() {
     return ListView.builder(
       itemCount: _currentItems.length + (_pathStack.isNotEmpty ? 1 : 0),
       itemBuilder: (context, i) {
