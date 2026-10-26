@@ -11,6 +11,7 @@ import '../services/artifact_service.dart';
 import '../services/github_org.dart';
 import '../services/share_service.dart';
 import '../services/github_service.dart';
+import '../services/uvm_runs.dart';
 import '../widgets/loader.dart';
 import '../theme.dart';
 import '../widgets/gh_widgets.dart';
@@ -1305,11 +1306,58 @@ class _RunDetailScreenState extends State<RunDetailScreen> {
             ),
           if (s?.files != null) ...[
             Divider(height: 1, color: AppColors.border),
-            ...s!.files!.map(_fileRow),
+            ...UvmRuns.findRuns(s!.files!).map(_uvmRunRow),
+            // A run artifact's own files are only shown when it has no
+            // run folder; otherwise the run rows say it all.
+            if (!UvmRuns.isRunArtifact(a.name) ||
+                UvmRuns.findRuns(s.files!).isEmpty)
+              ...s.files!.map(_fileRow),
           ],
         ],
       ),
     );
+  }
+
+  /// One uvm-debugger run inside an artifact, opened in the UVM viewer.
+  Widget _uvmRunRow(Directory dir) {
+    return ListTile(
+      dense: true,
+      leading: Icon(Icons.auto_awesome, color: AppColors.accent),
+      title: Text(UvmRuns.runId(dir),
+          style: TextStyle(
+              color: AppColors.text, fontFamily: 'monospace', fontSize: 12)),
+      subtitle: Text(
+          UvmRuns.summary(dir).isEmpty ? 'UVM run' : UvmRuns.summary(dir),
+          style: TextStyle(color: AppColors.muted, fontSize: 11)),
+      trailing: FilledButton.icon(
+        style: FilledButton.styleFrom(
+            backgroundColor: AppColors.button,
+            foregroundColor: AppColors.onButton),
+        onPressed: () => _openUvmRun(dir),
+        icon: const Icon(Icons.play_arrow, size: 18),
+        label: const Text('Open in ${UvmRuns.viewerName}'),
+      ),
+    );
+  }
+
+  Future<void> _openUvmRun(Directory dir) async {
+    final run = _run;
+    try {
+      await UvmRuns.open(dir, {
+        'repo': '${widget.owner}/${widget.repo}',
+        'run_id': '${run.id}',
+        'run_number': '${run.runNumber}',
+        'run_url': run.htmlUrl,
+        'workflow': run.name,
+        'branch': run.branch,
+        'sha': run.headSha,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is UvmViewerMissing ? '$e' : 'Could not open: $e'),
+          duration: const Duration(seconds: 6)));
+    }
   }
 
   Widget _fileRow(File f) {
