@@ -12,6 +12,7 @@ import '../services/github_org.dart';
 import '../services/share_service.dart';
 import '../services/github_service.dart';
 import '../services/uvm_runs.dart';
+import '../services/workflow_inputs.dart';
 import '../widgets/loader.dart';
 import '../theme.dart';
 import '../widgets/gh_widgets.dart';
@@ -129,7 +130,8 @@ class _ActionsScreenState extends State<ActionsScreen> {
     _load();
   }
 
-  /// Starts the selected workflow (needs a workflow_dispatch trigger).
+  /// Starts the selected workflow (needs a workflow_dispatch trigger),
+  /// asking for the inputs its file declares on the chosen branch.
   Future<void> _runWorkflow(Workflow w) async {
     var branch = 'main';
     try {
@@ -137,40 +139,150 @@ class _ActionsScreenState extends State<ActionsScreen> {
           .defaultBranch;
     } catch (_) {}
     if (!mounted) return;
-    final ctrl = TextEditingController(text: branch);
+    final ref = TextEditingController(text: branch);
+    List<WorkflowInput>? inputs;
+    final values = <String, String>{};
+    final fields = <String, TextEditingController>{};
+    var loadedFor = '';
+
     final go = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('Run ${w.name}', style: TextStyle(color: AppColors.text)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(
-              'Works for workflows with a workflow_dispatch trigger. '
-              'Inputs use their defaults.',
-              style: TextStyle(color: AppColors.muted, fontSize: 13)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: ctrl,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        Future<void> load() async {
+          final at = ref.text.trim();
+          if (at.isEmpty || at == loadedFor) return;
+          loadedFor = at;
+          if (inputs != null) setD(() => inputs = null);
+          final list = await WorkflowInputs.fetch(
+              widget.github, widget.owner, widget.repo, w.path,
+              ref: at);
+          if (!ctx.mounted || loadedFor != at) return;
+          setD(() {
+            inputs = list;
+            for (final i in list) {
+              values.putIfAbsent(i.name,
+                  () => i.type == 'boolean' && i.defaultValue.isEmpty
+                      ? 'false'
+                      : i.type == 'choice' &&
+                              i.defaultValue.isEmpty &&
+                              i.options.isNotEmpty
+                          ? i.options.first
+                          : i.defaultValue);
+              fields.putIfAbsent(
+                  i.name, () => TextEditingController(text: values[i.name]));
+            }
+          });
+        }
+
+        if (loadedFor.isEmpty) load();
+        final list = inputs;
+        final missing = list != null &&
+            list.any((i) => i.required && (values[i.name] ?? '').trim().isEmpty);
+
+        Widget field(WorkflowInput i) {
+          final label = i.required ? '${i.name} *' : i.name;
+          final help = i.description.isEmpty ? null : i.description;
+          if (i.type == 'boolean') {
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(label, style: TextStyle(color: AppColors.text)),
+              subtitle: help == null
+                  ? null
+                  : Text(help, style: TextStyle(color: AppColors.muted)),
+              value: values[i.name] == 'true',
+              onChanged: (v) => setD(() => values[i.name] = '$v'),
+            );
+          }
+          if (i.type == 'choice' && i.options.isNotEmpty) {
+            return DropdownButtonFormField<String>(
+              key: ValueKey('$loadedFor/${i.name}'),
+              initialValue: i.options.contains(values[i.name])
+                  ? values[i.name]
+                  : i.options.first,
+              dropdownColor: AppColors.surface,
+              style: TextStyle(color: AppColors.text),
+              decoration: InputDecoration(labelText: label, helperText: help),
+              items: [
+                for (final o in i.options)
+                  DropdownMenuItem(value: o, child: Text(o)),
+              ],
+              onChanged: (v) => setD(() => values[i.name] = v ?? ''),
+            );
+          }
+          return TextField(
+            controller: fields[i.name],
             autocorrect: false,
+            keyboardType:
+                i.type == 'number' ? TextInputType.number : TextInputType.text,
             style: TextStyle(color: AppColors.text, fontFamily: 'monospace'),
-            decoration: const InputDecoration(labelText: 'Branch or tag'),
+            decoration: InputDecoration(
+                labelText: label, helperText: help, helperMaxLines: 3),
+            onChanged: (v) => setD(() => values[i.name] = v),
+          );
+        }
+
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text('Run ${w.name}', style: TextStyle(color: AppColors.text)),
+          content: SingleChildScrollView(
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: ref,
+                    autocorrect: false,
+                    style: TextStyle(
+                        color: AppColors.text, fontFamily: 'monospace'),
+                    decoration: const InputDecoration(
+                        labelText: 'Branch or tag',
+                        helperText: 'Inputs come from the workflow on this '
+                            'branch. Press enter to reload them.'),
+                    onSubmitted: (_) => load(),
+                  ),
+                  const SizedBox(height: 12),
+                  if (list == null)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (list.isEmpty)
+                    Text(
+                        'No inputs found. Works for workflows with a '
+                        'workflow_dispatch trigger.',
+                        style: TextStyle(color: AppColors.muted, fontSize: 13))
+                  else
+                    for (final i in list)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: field(i),
+                      ),
+                ]),
           ),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Run workflow')),
-        ],
-      ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: list == null || missing
+                    ? null
+                    : () => Navigator.pop(ctx, true),
+                child: const Text('Run workflow')),
+          ],
+        );
+      }),
     );
+    final sent = {
+      for (final i in inputs ?? const <WorkflowInput>[])
+        i.name: (values[i.name] ?? '').trim(),
+    };
+    final at = ref.text.trim();
     if (go != true || !mounted) return;
     final ok = await runAction(
         context,
         () => widget.github.dispatchWorkflow(
-            widget.owner, widget.repo, w.id, ctrl.text.trim()),
+            widget.owner, widget.repo, w.id, at,
+            inputs: sent),
         done: 'Workflow started. It appears here in a few seconds.');
     if (ok) Future.delayed(const Duration(seconds: 4), _load);
   }

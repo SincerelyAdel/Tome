@@ -432,11 +432,14 @@ extension GitHubOrg on GitHubService {
   Future<void> rerunJob(String owner, String repo, int jobId) =>
       api('/repos/$owner/$repo/actions/jobs/$jobId/rerun', method: 'POST');
 
-  /// Starts a workflow that has a `workflow_dispatch` trigger.
+  /// Starts a workflow that has a `workflow_dispatch` trigger. [inputs] are
+  /// the trigger's inputs; ones left out use their defaults.
   Future<void> dispatchWorkflow(
-          String owner, String repo, int workflowId, String ref) =>
+          String owner, String repo, int workflowId, String ref,
+          {Map<String, String> inputs = const {}}) =>
       api('/repos/$owner/$repo/actions/workflows/$workflowId/dispatches',
-          method: 'POST', body: {'ref': ref});
+          method: 'POST',
+          body: {'ref': ref, if (inputs.isNotEmpty) 'inputs': inputs});
 
   /// Deletes a repository for good (GitHub keeps it restorable for a while
   /// under Settings → Repositories → Deleted repositories).
