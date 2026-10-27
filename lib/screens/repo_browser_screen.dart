@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/repo_item.dart';
 import '../services/uvm_runs.dart';
+import '../services/uvm_vip.dart';
 import '../services/github_service.dart';
 import '../services/download_service.dart';
 import '../services/prefs_service.dart';
@@ -85,8 +88,11 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
         _currentItems = items;
         _loading = false;
         _runSummary = null;
+        _vip = null;
+        _vipWorkflow = null;
       });
       if (UvmRuns.isRunFolder(items)) _loadRunSummary(path);
+      if (UvmVip.isVipFolder(items)) _loadVip(path);
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -174,6 +180,207 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
                 onPressed: _openRun,
                 icon: const Icon(Icons.play_arrow, size: 18),
                 label: const Text('Open in ${UvmRuns.viewerName}'),
+              ),
+      ]),
+    );
+  }
+
+  // ------------------------------------------------------------- VIP runs
+
+  /// The VIP on screen (a folder holding vip.json), once vip.json is read.
+  UvmVip? _vip;
+
+  /// Whether the branch has the uvmdbg workflow; null while checking.
+  bool? _vipWorkflow;
+  bool _startingVip = false;
+
+  Future<void> _loadVip(String path) async {
+    final ref = _branch;
+    try {
+      final bytes = await _github.getRawFile(widget.owner, widget.repo,
+          path.isEmpty ? 'vip.json' : '$path/vip.json',
+          ref: ref);
+      final vip = UvmVip.parse(utf8.decode(bytes, allowMalformed: true),
+          folder: _pathStack.isEmpty ? widget.repo : _pathStack.last);
+      if (mounted && _currentPath == path) setState(() => _vip = vip);
+    } catch (_) {}
+    final has =
+        await UvmVip.hasWorkflow(_github, widget.owner, widget.repo, ref);
+    if (mounted && _currentPath == path) setState(() => _vipWorkflow = has);
+  }
+
+  /// Asks for the test and seed, starts the run and opens it in Actions.
+  Future<void> _runVip() async {
+    final vip = _vip;
+    if (vip == null) return;
+    final ref = _branch ?? _defaultBranch ?? 'main';
+    final choices = vip.testChoices;
+    var test = choices.isEmpty ? '' : choices.first;
+    final seed = TextEditingController(text: '1');
+
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text('Run ${vip.name}',
+              style: TextStyle(color: AppColors.text)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('On $ref, with ${UvmVip.workflowFile}',
+                    style: TextStyle(
+                        color: AppColors.muted,
+                        fontFamily: 'monospace',
+                        fontSize: 12.5)),
+                const SizedBox(height: 14),
+                if (choices.isEmpty)
+                  InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Test'),
+                    child: Text('Default test',
+                        style: TextStyle(color: AppColors.text)),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    initialValue: test,
+                    dropdownColor: AppColors.surface,
+                    style: TextStyle(
+                        color: AppColors.text, fontFamily: 'monospace'),
+                    decoration: const InputDecoration(labelText: 'Test'),
+                    items: [
+                      for (final t in choices)
+                        DropdownMenuItem(
+                          value: t,
+                          child: Text(
+                              t == vip.defaultTest ? '$t  (default)' : t),
+                        ),
+                    ],
+                    onChanged: (v) => setD(() => test = v ?? ''),
+                  ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: seed,
+                  autocorrect: false,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(
+                      color: AppColors.text, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    labelText: 'Seed',
+                    suffixIcon: IconButton(
+                      tooltip: 'Random seed',
+                      icon: const Icon(Icons.casino_outlined),
+                      onPressed: () => seed.text =
+                          '${1 + Random().nextInt(999999999)}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: const Icon(Icons.play_arrow, size: 18),
+                label: const Text('Run')),
+          ],
+        ),
+      ),
+    );
+    final seedText = seed.text;
+    if (go != true || !mounted) return;
+
+    setState(() => _startingVip = true);
+    try {
+      final run = await vip.start(_github, widget.owner, widget.repo, ref,
+          test: test, seed: seedText);
+      if (!mounted) return;
+      if (run == null) {
+        _showSnack('Run started. It will show up in Actions shortly.');
+        return;
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RunDetailScreen(
+            owner: widget.owner,
+            repo: widget.repo,
+            github: _github,
+            run: run,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showSnack('Could not start the run: $e');
+    } finally {
+      if (mounted) setState(() => _startingVip = false);
+    }
+  }
+
+  /// Shown above a VIP folder (one holding vip.json).
+  Widget _vipBanner() {
+    final vip = _vip;
+    final name =
+        vip?.name ?? (_pathStack.isEmpty ? widget.repo : _pathStack.last);
+    final String sub;
+    if (_vipWorkflow == false) {
+      sub = "${UvmVip.workflowPath} isn't on ${_branch ?? 'this branch'}";
+    } else if (vip == null) {
+      sub = 'VIP';
+    } else {
+      final n = vip.tests.length;
+      sub = [
+        'VIP',
+        n == 1 ? '1 test' : '$n tests',
+        if (vip.defaultTest.isNotEmpty) 'default ${vip.defaultTest}',
+      ].join(' · ');
+    }
+    final ready = vip != null && _vipWorkflow == true;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.6)),
+      ),
+      child: Row(children: [
+        Icon(Icons.memory, color: AppColors.accent, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: AppColors.text,
+                    fontFamily: 'monospace',
+                    fontSize: 13)),
+            Text(sub,
+                style: TextStyle(
+                    color: _vipWorkflow == false
+                        ? AppColors.danger
+                        : AppColors.muted,
+                    fontSize: 11.5)),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        _startingVip || (vip != null && _vipWorkflow == null)
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 3))
+            : FilledButton.icon(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.button,
+                    foregroundColor: AppColors.onButton),
+                onPressed: ready ? _runVip : null,
+                icon: const Icon(Icons.play_arrow, size: 18),
+                label: const Text('Run'),
               ),
       ]),
     );
@@ -547,8 +754,12 @@ class _RepoBrowserScreenState extends State<RepoBrowserScreen> {
     }
 
     final list = _fileList();
-    if (!UvmRuns.isRunFolder(_currentItems)) return list;
-    return Column(children: [_runBanner(), Expanded(child: list)]);
+    final banners = [
+      if (UvmRuns.isRunFolder(_currentItems)) _runBanner(),
+      if (UvmVip.isVipFolder(_currentItems)) _vipBanner(),
+    ];
+    if (banners.isEmpty) return list;
+    return Column(children: [...banners, Expanded(child: list)]);
   }
 
   Widget _fileList() {

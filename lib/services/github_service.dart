@@ -488,7 +488,8 @@ class GitHubService {
   }
 
   Future<List<WorkflowRun>> getWorkflowRuns(String owner, String repo,
-      {int perPage = 30, int page = 1, int? workflowId}) async {
+      {int perPage = 30, int page = 1, Object? workflowId}) async {
+    // workflowId is the numeric id or the file name (e.g. build.yml).
     final base = workflowId == null
         ? '$_baseUrl/repos/$owner/$repo/actions/runs'
         : '$_baseUrl/repos/$owner/$repo/actions/workflows/$workflowId/runs';

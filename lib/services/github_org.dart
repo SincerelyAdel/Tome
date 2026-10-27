@@ -432,10 +432,11 @@ extension GitHubOrg on GitHubService {
   Future<void> rerunJob(String owner, String repo, int jobId) =>
       api('/repos/$owner/$repo/actions/jobs/$jobId/rerun', method: 'POST');
 
-  /// Starts a workflow that has a `workflow_dispatch` trigger. [inputs] are
-  /// the trigger's inputs; ones left out use their defaults.
+  /// Starts a workflow that has a `workflow_dispatch` trigger. [workflowId]
+  /// is its numeric id or its file name (e.g. `build.yml`). [inputs] are the
+  /// trigger's inputs; ones left out use their defaults.
   Future<void> dispatchWorkflow(
-          String owner, String repo, int workflowId, String ref,
+          String owner, String repo, Object workflowId, String ref,
           {Map<String, String> inputs = const {}}) =>
       api('/repos/$owner/$repo/actions/workflows/$workflowId/dispatches',
           method: 'POST',
